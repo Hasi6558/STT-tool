@@ -137,7 +137,7 @@ app.prepare().then(() => {
                   sessionId = response.session.id;
                   console.log("  Session ID:", sessionId);
 
-                  // Now configure the session
+                  // Now configure the session with optimized settings
                   openaiWs.send(
                     JSON.stringify({
                       type: "transcription_session.update",
@@ -145,13 +145,13 @@ app.prepare().then(() => {
                         input_audio_format: "pcm16",
                         input_audio_transcription: {
                           model: "gpt-4o-transcribe",
-                          language: "en", // English only
+                          language: "en", // English only for better accuracy
                         },
                         turn_detection: {
                           type: "server_vad",
-                          threshold: 0.5,
-                          prefix_padding_ms: 300,
-                          silence_duration_ms: 500,
+                          threshold: 0.6, // Increased threshold for less false positives
+                          prefix_padding_ms: 200, // Reduced padding for faster detection
+                          silence_duration_ms: 400, // Shorter silence for quicker turn detection
                         },
                         input_audio_noise_reduction: {
                           type: "near_field",

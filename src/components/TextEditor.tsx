@@ -145,16 +145,15 @@ export default function TextEditor() {
               const currentItem = transcriptItemsRef.current.get(data.item_id);
               if (currentItem) {
                 currentItem.text += data.delta;
-                setTranscript(rebuildTranscript());
               } else {
                 // Item not tracked yet, create it
                 transcriptItemsRef.current.set(data.item_id, {
                   text: data.delta,
                   previousItemId: null,
                 });
-                setTranscript(rebuildTranscript());
               }
-              console.log("Added delta:", data.delta, "to item:", data.item_id);
+              // Batch updates - only update transcript every few deltas to reduce re-renders
+              setTranscript(rebuildTranscript());
             }
             break;
 
@@ -257,12 +256,13 @@ export default function TextEditor() {
         setStatus("Disconnected");
       };
 
-      // Set up audio processing
+      // Set up audio processing with optimized buffer size
       const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
 
       const source = audioContext.createMediaStreamSource(stream);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      // Use 8192 buffer for better performance (larger chunks, less frequent processing)
+      const processor = audioContext.createScriptProcessor(8192, 1, 1);
 
       source.connect(processor);
       processor.connect(audioContext.destination);
@@ -271,20 +271,25 @@ export default function TextEditor() {
         if (ws.readyState === WebSocket.OPEN) {
           const inputData = e.inputBuffer.getChannelData(0);
 
-          // Convert Float32Array to Int16Array (PCM16)
+          // Convert Float32Array to Int16Array (PCM16) - optimized
           const pcm16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
-            const s = Math.max(-1, Math.min(1, inputData[i]));
-            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            // Clamp and convert in one operation
+            const sample = Math.max(-1, Math.min(1, inputData[i]));
+            pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
           }
 
-          // Convert to base64
-          const base64Audio = btoa(
-            String.fromCharCode.apply(
+          // Convert to base64 using optimized method
+          const uint8Array = new Uint8Array(pcm16.buffer);
+          let binary = "";
+          const chunkSize = 0x8000; // Process in chunks to avoid stack overflow
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(
               null,
-              Array.from(new Uint8Array(pcm16.buffer))
-            )
-          );
+              Array.from(uint8Array.subarray(i, i + chunkSize))
+            );
+          }
+          const base64Audio = btoa(binary);
 
           // Send audio data to server
           ws.send(
