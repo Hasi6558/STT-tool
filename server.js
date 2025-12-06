@@ -108,7 +108,7 @@ app.prepare().then(() => {
               return;
             }
 
-            // Connect to OpenAI Realtime API
+            // Connect to OpenAI Realtime API with transcription intent
             const WebSocket = (await import("ws")).default;
             openaiWs = new WebSocket(
               "wss://api.openai.com/v1/realtime?intent=transcription",
@@ -120,38 +120,11 @@ app.prepare().then(() => {
               }
             );
 
+            let sessionId = null;
+
             openaiWs.on("open", () => {
               console.log("Connected to OpenAI Realtime API");
-
-              // Configure transcription session
-              openaiWs.send(
-                JSON.stringify({
-                  type: "transcription_session.update",
-                  input_audio_format: "pcm16",
-                  input_audio_transcription: {
-                    model: "gpt-4o-transcribe",
-                    prompt: "",
-                    language: "",
-                  },
-                  turn_detection: {
-                    type: "server_vad",
-                    threshold: 0.5,
-                    prefix_padding_ms: 300,
-                    silence_duration_ms: 500,
-                  },
-                  input_audio_noise_reduction: {
-                    type: "near_field",
-                  },
-                  include: ["item.input_audio_transcription.logprobs"],
-                })
-              );
-
-              clientWs.send(
-                JSON.stringify({
-                  type: "ready",
-                  message: "Connected to transcription service",
-                })
-              );
+              // Don't send configuration immediately, wait for session.created
             });
 
             openaiWs.on("message", (message) => {
@@ -159,24 +132,67 @@ app.prepare().then(() => {
                 const response = JSON.parse(message.toString());
                 console.log("Received from OpenAI:", response.type);
 
+                // Capture session ID and configure transcription
+                if (response.type === "transcription_session.created") {
+                  sessionId = response.session.id;
+                  console.log("  Session ID:", sessionId);
+
+                  // Now configure the session
+                  openaiWs.send(
+                    JSON.stringify({
+                      type: "transcription_session.update",
+                      session: {
+                        input_audio_format: "pcm16",
+                        input_audio_transcription: {
+                          model: "gpt-4o-transcribe",
+                          // Omit language to enable auto-detection
+                        },
+                        turn_detection: {
+                          type: "server_vad",
+                          threshold: 0.5,
+                          prefix_padding_ms: 300,
+                          silence_duration_ms: 500,
+                        },
+                        input_audio_noise_reduction: {
+                          type: "near_field",
+                        },
+                        include: ["item.input_audio_transcription.logprobs"],
+                      },
+                    })
+                  );
+
+                  clientWs.send(
+                    JSON.stringify({
+                      type: "ready",
+                      message: "Connected to transcription service",
+                    })
+                  );
+                }
+
+                // Log errors for debugging
+                if (response.type === "error") {
+                  console.error(
+                    "  OpenAI Error:",
+                    JSON.stringify(response.error, null, 2)
+                  );
+                }
+
                 // Log important ordering information for debugging
                 if (response.type === "input_audio_buffer.committed") {
                   console.log("  item_id:", response.item_id);
                   console.log("  previous_item_id:", response.previous_item_id);
                 }
 
-                // Forward relevant events to client
-                if (
-                  response.type ===
-                    "conversation.item.input_audio_transcription.completed" ||
-                  response.type ===
-                    "conversation.item.input_audio_transcription.delta" ||
-                  response.type === "input_audio_buffer.speech_started" ||
-                  response.type === "input_audio_buffer.speech_stopped" ||
-                  response.type === "input_audio_buffer.committed"
-                ) {
-                  clientWs.send(JSON.stringify(response));
+                // Log all conversation item events for debugging
+                if (response.type?.startsWith("conversation.item")) {
+                  console.log(
+                    "  Full event:",
+                    JSON.stringify(response, null, 2)
+                  );
                 }
+
+                // Forward ALL events to client for now to debug
+                clientWs.send(JSON.stringify(response));
               } catch (error) {
                 console.error("Error parsing OpenAI message:", error);
               }

@@ -18,12 +18,17 @@ export default function TextEditor() {
     null
   );
   const audioContextRef = useRef<AudioContext | null>(null);
-  
+
   // Track transcript items with their IDs for proper ordering
-  const transcriptItemsRef = useRef<Map<string, {
-    text: string;
-    previousItemId: string | null;
-  }>>(new Map());
+  const transcriptItemsRef = useRef<
+    Map<
+      string,
+      {
+        text: string;
+        previousItemId: string | null;
+      }
+    >
+  >(new Map());
   const currentItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -81,7 +86,7 @@ export default function TextEditor() {
   const startRecording = async () => {
     try {
       setStatus("Initializing...");
-      
+
       // Clear previous transcript items
       transcriptItemsRef.current.clear();
       currentItemIdRef.current = null;
@@ -127,7 +132,9 @@ export default function TextEditor() {
                 text: "",
                 previousItemId: data.previous_item_id || null,
               });
-              console.log(`Committed item: ${data.item_id}, previous: ${data.previous_item_id}`);
+              console.log(
+                `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`
+              );
             }
             setStatus("Processing speech...");
             break;
@@ -135,7 +142,9 @@ export default function TextEditor() {
           case "conversation.item.input_audio_transcription.delta":
             // Real-time transcription updates for current item
             if (data.delta && currentItemIdRef.current) {
-              const currentItem = transcriptItemsRef.current.get(currentItemIdRef.current);
+              const currentItem = transcriptItemsRef.current.get(
+                currentItemIdRef.current
+              );
               if (currentItem) {
                 currentItem.text += data.delta;
                 setTranscript(rebuildTranscript());
@@ -170,6 +179,40 @@ export default function TextEditor() {
             setStatus("Processing...");
             break;
 
+          case "conversation.item.created":
+            // Handle item created event which may contain transcript
+            console.log("Item created:", data);
+            if (data.item?.id) {
+              const itemId = data.item.id;
+              // Check if this item has a transcript in content
+              if (data.item.content && Array.isArray(data.item.content)) {
+                for (const content of data.item.content) {
+                  console.log("Content item:", content);
+                  if (content.type === "input_audio" && content.transcript) {
+                    console.log(
+                      "Found transcript in item.created:",
+                      content.transcript
+                    );
+                    const item = transcriptItemsRef.current.get(itemId);
+                    if (item) {
+                      item.text = content.transcript;
+                      setTranscript(rebuildTranscript());
+                      setStatus("Recording...");
+                    } else {
+                      // Item not tracked yet, add it with data from event
+                      transcriptItemsRef.current.set(itemId, {
+                        text: content.transcript,
+                        previousItemId: data.previous_item_id || null,
+                      });
+                      setTranscript(rebuildTranscript());
+                      setStatus("Recording...");
+                    }
+                  }
+                }
+              }
+            }
+            break;
+
           case "error":
             console.error("WebSocket error:", data.message);
             setStatus(`Error: ${data.message}`);
@@ -177,6 +220,11 @@ export default function TextEditor() {
 
           case "disconnected":
             setStatus("Disconnected");
+            break;
+
+          default:
+            // Log unhandled events for debugging
+            console.log("Unhandled event type:", data.type);
             break;
         }
       };
