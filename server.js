@@ -145,7 +145,7 @@ app.prepare().then(() => {
                         input_audio_format: "pcm16",
                         input_audio_transcription: {
                           model: "gpt-4o-transcribe",
-                          // Omit language to enable auto-detection
+                          language: "en", // English only
                         },
                         turn_detection: {
                           type: "server_vad",

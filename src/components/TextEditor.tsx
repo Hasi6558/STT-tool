@@ -141,14 +141,20 @@ export default function TextEditor() {
 
           case "conversation.item.input_audio_transcription.delta":
             // Real-time transcription updates for current item
-            if (data.delta && currentItemIdRef.current) {
-              const currentItem = transcriptItemsRef.current.get(
-                currentItemIdRef.current
-              );
+            if (data.delta && data.item_id) {
+              const currentItem = transcriptItemsRef.current.get(data.item_id);
               if (currentItem) {
                 currentItem.text += data.delta;
                 setTranscript(rebuildTranscript());
+              } else {
+                // Item not tracked yet, create it
+                transcriptItemsRef.current.set(data.item_id, {
+                  text: data.delta,
+                  previousItemId: null,
+                });
+                setTranscript(rebuildTranscript());
               }
+              console.log("Added delta:", data.delta, "to item:", data.item_id);
             }
             break;
 
@@ -158,9 +164,15 @@ export default function TextEditor() {
               const item = transcriptItemsRef.current.get(data.item_id);
               if (item) {
                 item.text = data.transcript;
+                console.log(
+                  `Completed transcription for ${data.item_id}: "${data.transcript}"`
+                );
                 setTranscript(rebuildTranscript());
               } else {
                 // Fallback if item wasn't tracked
+                console.log(
+                  `Item ${data.item_id} not tracked, adding with transcript: "${data.transcript}"`
+                );
                 transcriptItemsRef.current.set(data.item_id, {
                   text: data.transcript,
                   previousItemId: null,
@@ -211,6 +223,12 @@ export default function TextEditor() {
                 }
               }
             }
+            break;
+
+          case "transcription_session.created":
+          case "transcription_session.updated":
+            // Session events - no action needed, just acknowledged
+            console.log("Session event:", data.type);
             break;
 
           case "error":
