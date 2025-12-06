@@ -18,6 +18,13 @@ export default function TextEditor() {
     null
   );
   const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // Track transcript items with their IDs for proper ordering
+  const transcriptItemsRef = useRef<Map<string, {
+    text: string;
+    previousItemId: string | null;
+  }>>(new Map());
+  const currentItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -37,9 +44,48 @@ export default function TextEditor() {
     };
   }, []);
 
+  // Helper function to rebuild transcript in correct order
+  const rebuildTranscript = () => {
+    const items = transcriptItemsRef.current;
+    if (items.size === 0) return "";
+
+    // Build a map of item_id -> next_item_id
+    const nextMap = new Map<string, string>();
+    let firstItemId: string | null = null;
+
+    items.forEach((item, itemId) => {
+      if (item.previousItemId) {
+        nextMap.set(item.previousItemId, itemId);
+      } else {
+        firstItemId = itemId;
+      }
+    });
+
+    // Traverse in order
+    const orderedTexts: string[] = [];
+    let currentId: string | null = firstItemId;
+    const visited = new Set<string>();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const item = items.get(currentId);
+      if (item && item.text) {
+        orderedTexts.push(item.text);
+      }
+      currentId = nextMap.get(currentId) || null;
+    }
+
+    return orderedTexts.join(" ");
+  };
+
   const startRecording = async () => {
     try {
       setStatus("Initializing...");
+      
+      // Clear previous transcript items
+      transcriptItemsRef.current.clear();
+      currentItemIdRef.current = null;
+      setTranscript("");
 
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -72,18 +118,48 @@ export default function TextEditor() {
             setStatus("Recording...");
             break;
 
+          case "input_audio_buffer.committed":
+            // Speech chunk detected and committed
+            // Track the item_id and previous_item_id for ordering
+            if (data.item_id) {
+              currentItemIdRef.current = data.item_id;
+              transcriptItemsRef.current.set(data.item_id, {
+                text: "",
+                previousItemId: data.previous_item_id || null,
+              });
+              console.log(`Committed item: ${data.item_id}, previous: ${data.previous_item_id}`);
+            }
+            setStatus("Processing speech...");
+            break;
+
           case "conversation.item.input_audio_transcription.delta":
-            // Real-time transcription updates
-            if (data.delta) {
-              setTranscript((prev) => prev + data.delta);
+            // Real-time transcription updates for current item
+            if (data.delta && currentItemIdRef.current) {
+              const currentItem = transcriptItemsRef.current.get(currentItemIdRef.current);
+              if (currentItem) {
+                currentItem.text += data.delta;
+                setTranscript(rebuildTranscript());
+              }
             }
             break;
 
           case "conversation.item.input_audio_transcription.completed":
             // Final transcription for this segment
-            if (data.transcript) {
-              setTranscript((prev) => prev + data.transcript + " ");
+            if (data.transcript && data.item_id) {
+              const item = transcriptItemsRef.current.get(data.item_id);
+              if (item) {
+                item.text = data.transcript;
+                setTranscript(rebuildTranscript());
+              } else {
+                // Fallback if item wasn't tracked
+                transcriptItemsRef.current.set(data.item_id, {
+                  text: data.transcript,
+                  previousItemId: null,
+                });
+                setTranscript(rebuildTranscript());
+              }
             }
+            setStatus("Recording...");
             break;
 
           case "input_audio_buffer.speech_started":
