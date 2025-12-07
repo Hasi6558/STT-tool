@@ -398,7 +398,7 @@ export default function TextEditor({
     <div>
       <Card className="w-full min-h-screen bg-red">
         <CardHeader className="flex items-center border-b-1 border-b-gray-300 justify-center">
-          <div className="h-[120px] flex flex-col justify-center items-center">
+          <div className="flex flex-col justify-center items-center">
             <div className="relative mb-2">
               {isMicOn && (
                 <>
@@ -420,25 +420,29 @@ export default function TextEditor({
           </div>
         </CardHeader>
         <CardContent className="relative flex items-center justify-center">
-          <div className="w-full p-4">
-            <div className="absolute top-4 right-4 flex items-start pt-4">
+          <div className="w-full">
+            <div className="absolute top-0 right-0 flex items-start pt-2 sm:pt-4 hidden lg:flex">
               <Button
-                className="h-16 w-8 rounded-l-lg rounded-r-none bg-zinc-200  hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
+                className="h-12 w-6 sm:h-16 sm:w-8 rounded-l-lg rounded-r-none bg-zinc-200 hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
                 onClick={() => setIsModificationBarOpen(!isModificationBarOpen)}
                 title={isModificationBarOpen ? "Close sidebar" : "Open sidebar"}
               >
                 <FontAwesomeIcon
                   icon={isModificationBarOpen ? faChevronRight : faChevronLeft}
-                  className="text-sm text-black"
+                  className="text-xs sm:text-sm text-black"
                 />
               </Button>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Transcript:</h3>
+
             <Textarea
-                placeholder={'No transcript yet. Click the microphone to start recording.'}
+              placeholder={
+                "No transcript yet. Click the microphone to start recording."
+              }
               disabled={isMicOn}
               ref={textareaRef}
-              className={"h-[75vh]"}
+              className={
+                "h-[60vh] sm:h-[65vh] lg:h-[75vh] px-2 sm:px-4 text-sm sm:text-base"
+              }
               value={
                 accumulatedTranscript && transcript
                   ? (() => {
@@ -455,19 +459,18 @@ export default function TextEditor({
                         after
                       );
                     })()
-                  : accumulatedTranscript ||
-                    transcript
+                  : accumulatedTranscript || transcript
               }
               onChange={(e) => {
                 setAccumulatedTranscript(e.target.value);
                 setCursorPosition(e.target.selectionStart);
               }}
-              onClick={(e) => {
+              onClick={() => {
                 if (textareaRef.current) {
                   setCursorPosition(textareaRef.current.selectionStart);
                 }
               }}
-              onKeyUp={(e) => {
+              onKeyUp={() => {
                 if (textareaRef.current) {
                   setCursorPosition(textareaRef.current.selectionStart);
                 }
