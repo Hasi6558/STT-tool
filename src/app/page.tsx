@@ -1,16 +1,12 @@
 "use client";
 import TextEditor from "@/components/TextEditor";
-import Modificationbar from "@/components/Modificationbar";
-import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronRight,
-  faChevronLeft,
-} from "@fortawesome/free-solid-svg-icons";
+import Modificationbar from "@/components/Modificationbar";0
 import { useState } from "react";
 
 export default function Home() {
   const [isModificationBarOpen, setIsModificationBarOpen] = useState(true);
+    const [accumulatedTranscript, setAccumulatedTranscript] =
+        useState<string>("");
   return (
     <div className="flex min-h-screen bg-zinc-50 font-sans">
       <div className="flex w-full min-h-screen p-4 gap-0">
@@ -22,6 +18,8 @@ export default function Home() {
           <TextEditor
             isModificationBarOpen={isModificationBarOpen}
             setIsModificationBarOpen={setIsModificationBarOpen}
+            accumulatedTranscript={accumulatedTranscript}
+            setAccumulatedTranscript={setAccumulatedTranscript}
           />
         </div>
 

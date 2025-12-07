@@ -14,17 +14,20 @@ import { Textarea } from "@/components/ui/textarea";
 interface TextEditorProps {
   isModificationBarOpen: boolean;
   setIsModificationBarOpen: (value: boolean) => void;
+  accumulatedTranscript: string;
+  setAccumulatedTranscript: (value: string) => void;
 }
 
 export default function TextEditor({
   isModificationBarOpen,
   setIsModificationBarOpen,
+  accumulatedTranscript,
+  setAccumulatedTranscript,
 }: TextEditorProps) {
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
-  const [accumulatedTranscript, setAccumulatedTranscript] =
-    useState<string>("");
+
   const [cursorPosition, setCursorPosition] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -364,17 +367,15 @@ export default function TextEditor({
 
       // Insert the current transcript at the saved cursor position
       if (transcript.trim()) {
-        setAccumulatedTranscript((prev) => {
-          const before = prev.slice(0, cursorPosition);
-          const after = prev.slice(cursorPosition);
-          return (
-            before +
-            (before && !before.endsWith(" ") ? " " : "") +
-            transcript +
-            (after && !after.startsWith(" ") ? " " : "") +
-            after
-          );
-        });
+        const before = accumulatedTranscript.slice(0, cursorPosition);
+        const after = accumulatedTranscript.slice(cursorPosition);
+        const newTranscript =
+          before +
+          (before && !before.endsWith(" ") ? " " : "") +
+          transcript +
+          (after && !after.startsWith(" ") ? " " : "") +
+          after;
+        setAccumulatedTranscript(newTranscript);
         setTranscript(""); // Clear transcript after accumulating
       }
 
@@ -434,6 +435,7 @@ export default function TextEditor({
             </div>
             <h3 className="text-lg font-semibold mb-2">Transcript:</h3>
             <Textarea
+              disabled={isMicOn}
               ref={textareaRef}
               className={"h-[75vh]"}
               value={
@@ -471,14 +473,6 @@ export default function TextEditor({
                 }
               }}
             />
-
-            {/*<p className="text-gray-700 whitespace-pre-wrap">*/}
-            {/*  {accumulatedTranscript && transcript*/}
-            {/*    ? `${accumulatedTranscript} ${transcript}`*/}
-            {/*    : accumulatedTranscript ||*/}
-            {/*      transcript ||*/}
-            {/*      "No transcript yet. Click the microphone to start recording."}*/}
-            {/*</p>*/}
           </div>
         </CardContent>
       </Card>
