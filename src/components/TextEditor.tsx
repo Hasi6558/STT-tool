@@ -25,8 +25,10 @@ export default function TextEditor({
   const [status, setStatus] = useState<string>("Ready");
   const [accumulatedTranscript, setAccumulatedTranscript] =
     useState<string>("");
+  const [cursorPosition, setCursorPosition] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<{ stop: () => void; state: string } | null>(
     null
   );
@@ -98,6 +100,11 @@ export default function TextEditor({
   const startRecording = async () => {
     try {
       setStatus("Initializing...");
+
+      // Save cursor position before starting recording
+      if (textareaRef.current) {
+        setCursorPosition(textareaRef.current.selectionStart);
+      }
 
       // Clear current session transcript items but keep accumulated transcript
       transcriptItemsRef.current.clear();
@@ -355,11 +362,19 @@ export default function TextEditor({
         wsRef.current = null;
       }
 
-      // Accumulate the current transcript before clearing
+      // Insert the current transcript at the saved cursor position
       if (transcript.trim()) {
-        setAccumulatedTranscript((prev) =>
-          prev ? `${prev} ${transcript}` : transcript
-        );
+        setAccumulatedTranscript((prev) => {
+          const before = prev.slice(0, cursorPosition);
+          const after = prev.slice(cursorPosition);
+          return (
+            before +
+            (before && !before.endsWith(" ") ? " " : "") +
+            transcript +
+            (after && !after.startsWith(" ") ? " " : "") +
+            after
+          );
+        });
         setTranscript(""); // Clear transcript after accumulating
       }
 
@@ -419,14 +434,42 @@ export default function TextEditor({
             </div>
             <h3 className="text-lg font-semibold mb-2">Transcript:</h3>
             <Textarea
+              ref={textareaRef}
               className={"h-[75vh]"}
               value={
                 accumulatedTranscript && transcript
-                  ? `${accumulatedTranscript} ${transcript}`
+                  ? (() => {
+                      const before = accumulatedTranscript.slice(
+                        0,
+                        cursorPosition
+                      );
+                      const after = accumulatedTranscript.slice(cursorPosition);
+                      return (
+                        before +
+                        (before && !before.endsWith(" ") ? " " : "") +
+                        transcript +
+                        (after && !after.startsWith(" ") ? " " : "") +
+                        after
+                      );
+                    })()
                   : accumulatedTranscript ||
                     transcript ||
                     "No transcript yet. Click the microphone to start recording."
               }
+              onChange={(e) => {
+                setAccumulatedTranscript(e.target.value);
+                setCursorPosition(e.target.selectionStart);
+              }}
+              onClick={(e) => {
+                if (textareaRef.current) {
+                  setCursorPosition(textareaRef.current.selectionStart);
+                }
+              }}
+              onKeyUp={(e) => {
+                if (textareaRef.current) {
+                  setCursorPosition(textareaRef.current.selectionStart);
+                }
+              }}
             />
 
             {/*<p className="text-gray-700 whitespace-pre-wrap">*/}
