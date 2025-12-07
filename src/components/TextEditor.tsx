@@ -435,6 +435,7 @@ export default function TextEditor({
             </div>
             <h3 className="text-lg font-semibold mb-2">Transcript:</h3>
             <Textarea
+                placeholder={'No transcript yet. Click the microphone to start recording.'}
               disabled={isMicOn}
               ref={textareaRef}
               className={"h-[75vh]"}
@@ -455,8 +456,7 @@ export default function TextEditor({
                       );
                     })()
                   : accumulatedTranscript ||
-                    transcript ||
-                    "No transcript yet. Click the microphone to start recording."
+                    transcript
               }
               onChange={(e) => {
                 setAccumulatedTranscript(e.target.value);
