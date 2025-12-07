@@ -1,7 +1,11 @@
-import { Card, CardHeader } from "@/components/ui/card";
+import {Card, CardContent, CardHeader} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-export default function Modificationbar() {
+interface ModificationbarProps {
+    accumulatedTranscript: string;
+}
+
+export default function Modificationbar({accumulatedTranscript}: ModificationbarProps) {
   return (
     <div className="">
       <Card className="min-h-screen">
@@ -10,6 +14,8 @@ export default function Modificationbar() {
           <Button>Enhance</Button>
           <Button>Boook Style</Button>
         </CardHeader>
+          <CardContent className="flex items-center border-b-1 border-b-gray-300 justify-center pb-4  ">
+          </CardContent>
       </Card>
     </div>
   );

@@ -28,7 +28,7 @@ export default function Home() {
             isModificationBarOpen ? "flex-1 opacity-100" : "w-0 opacity-0"
           }`}
         >
-          {isModificationBarOpen && <Modificationbar />}
+          {isModificationBarOpen && <Modificationbar accumulatedTranscript={accumulatedTranscript} />}
         </div>
       </div>
     </div>
