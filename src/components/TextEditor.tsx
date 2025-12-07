@@ -2,16 +2,29 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faChevronLeft,
+  faChevronRight,
   faMicrophoneLines,
   faMicrophoneLinesSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
+import { Textarea } from "@/components/ui/textarea";
 
-export default function TextEditor() {
+interface TextEditorProps {
+  isModificationBarOpen: boolean;
+  setIsModificationBarOpen: (value: boolean) => void;
+}
+
+export default function TextEditor({
+  isModificationBarOpen,
+  setIsModificationBarOpen,
+}: TextEditorProps) {
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
+  const [accumulatedTranscript, setAccumulatedTranscript] =
+    useState<string>("");
 
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<{ stop: () => void; state: string } | null>(
@@ -19,7 +32,6 @@ export default function TextEditor() {
   );
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Track transcript items with their IDs for proper ordering
   const transcriptItemsRef = useRef<
     Map<
       string,
@@ -87,7 +99,7 @@ export default function TextEditor() {
     try {
       setStatus("Initializing...");
 
-      // Clear previous transcript items
+      // Clear current session transcript items but keep accumulated transcript
       transcriptItemsRef.current.clear();
       currentItemIdRef.current = null;
       setTranscript("");
@@ -343,6 +355,14 @@ export default function TextEditor() {
         wsRef.current = null;
       }
 
+      // Accumulate the current transcript before clearing
+      if (transcript.trim()) {
+        setAccumulatedTranscript((prev) =>
+          prev ? `${prev} ${transcript}` : transcript
+        );
+        setTranscript(""); // Clear transcript after accumulating
+      }
+
       setIsMicOn(false);
       setStatus("Ready");
     } catch (error) {
@@ -383,13 +403,39 @@ export default function TextEditor() {
             <span className="text-gray-600 mb-4">{status}</span>
           </div>
         </CardHeader>
-        <CardContent className="flex items-center justify-center">
+        <CardContent className="relative flex items-center justify-center">
           <div className="w-full p-4">
+            <div className="absolute top-4 right-4 flex items-start pt-4">
+              <Button
+                className="h-16 w-8 rounded-l-lg rounded-r-none bg-zinc-200  hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
+                onClick={() => setIsModificationBarOpen(!isModificationBarOpen)}
+                title={isModificationBarOpen ? "Close sidebar" : "Open sidebar"}
+              >
+                <FontAwesomeIcon
+                  icon={isModificationBarOpen ? faChevronRight : faChevronLeft}
+                  className="text-sm text-black"
+                />
+              </Button>
+            </div>
             <h3 className="text-lg font-semibold mb-2">Transcript:</h3>
-            <p className="text-gray-700 whitespace-pre-wrap">
-              {transcript ||
-                "No transcript yet. Click the microphone to start recording."}
-            </p>
+            <Textarea
+              className={"h-[75vh]"}
+              value={
+                accumulatedTranscript && transcript
+                  ? `${accumulatedTranscript} ${transcript}`
+                  : accumulatedTranscript ||
+                    transcript ||
+                    "No transcript yet. Click the microphone to start recording."
+              }
+            />
+
+            {/*<p className="text-gray-700 whitespace-pre-wrap">*/}
+            {/*  {accumulatedTranscript && transcript*/}
+            {/*    ? `${accumulatedTranscript} ${transcript}`*/}
+            {/*    : accumulatedTranscript ||*/}
+            {/*      transcript ||*/}
+            {/*      "No transcript yet. Click the microphone to start recording."}*/}
+            {/*</p>*/}
           </div>
         </CardContent>
       </Card>
