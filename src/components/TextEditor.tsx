@@ -124,8 +124,11 @@ export default function TextEditor({
         },
       });
 
-      // Create WebSocket connection
-      const ws = new WebSocket(`ws://localhost:3000/ws`);
+      // Create WebSocket connection with dynamic URL for production
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsHost = window.location.host;
+      const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -397,7 +400,11 @@ export default function TextEditor({
   return (
     <div>
       <Card className="w-full min-h-screen bg-red">
-        <CardHeader className="flex items-center border-b-1 border-b-gray-300 justify-center">
+        <CardHeader
+          className={`flex items-center border-b-4 justify-center transition-colors ${
+            isMicOn ? "border-green-500" : "border-red-500"
+          }`}
+        >
           <div className="flex flex-col justify-center items-center">
             <div className="relative mb-2">
               {isMicOn && (
@@ -441,7 +448,7 @@ export default function TextEditor({
               disabled={isMicOn}
               ref={textareaRef}
               className={
-                "h-[60vh] sm:h-[65vh] lg:h-[75vh] px-2 sm:px-4 text-sm sm:text-base"
+                "h-[60vh] sm:h-[65vh] lg:h-[75vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
               }
               value={
                 accumulatedTranscript && transcript

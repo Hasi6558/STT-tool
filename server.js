@@ -8,10 +8,20 @@ import fetch from "node-fetch";
 dotenv.config();
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
-const port = 3000;
+const hostname = "0.0.0.0"; // Always bind to 0.0.0.0 for cloud deployments
+const port = parseInt(process.env.PORT || "3000", 10);
 
-const app = next({ dev, hostname, port });
+console.log(`[Server] Starting in ${dev ? "development" : "production"} mode`);
+console.log(`[Server] Will bind to ${hostname}:${port}`);
+console.log(`[Server] PORT env var: ${process.env.PORT}`);
+console.log(`[Server] NODE_ENV: ${process.env.NODE_ENV}`);
+
+const app = next({
+  dev,
+  hostname: "0.0.0.0",
+  port,
+  customServer: true,
+});
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -63,9 +73,16 @@ app.prepare().then(() => {
     process.exit(1);
   });
 
-  server.listen(port, () => {
-    console.log(`> Ready on http://${hostname}:${port}`);
-    console.log(`> WebSocket server ready on ws://${hostname}:${port}/ws`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`✓ Server successfully listening on 0.0.0.0:${port}`);
+    console.log(`✓ WebSocket server ready on ws://0.0.0.0:${port}/ws`);
+    console.log(`✓ Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`✓ Internal port configured: 3000`);
+    console.log(`✓ Listening on all interfaces (0.0.0.0)`);
+    console.log(`✓ Ready to accept connections from Fly.io proxy`);
+
+    // Health check endpoint is available
+    console.log(`✓ Health check: GET /`);
 
     // Set up WebSocket server AFTER HTTP server is listening
     // This ensures Next.js HMR is already set up

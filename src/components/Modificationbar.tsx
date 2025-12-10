@@ -153,7 +153,7 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
             </div>
           </CardHeader>
           <CardContent className="flex items-center border-gray-300 justify-center pb-2 sm:pb-4">
-            <div className="bg-[#f3f4f6] w-full h-[60vh] sm:h-[65vh] lg:h-[75vh] p-2 sm:p-4 md:p-6 rounded-md overflow-auto whitespace-pre-wrap text-sm sm:text-base">
+            <div className="bg-[#f3f4f6] w-full h-[60vh] sm:h-[65vh] lg:h-[75vh] p-2 sm:p-4 md:p-6 rounded-md overflow-auto whitespace-pre-wrap !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg">
               {loading ? <Spinner /> : <span>{modifiedText.result}</span>}
             </div>
           </CardContent>
