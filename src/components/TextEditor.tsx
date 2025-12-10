@@ -27,6 +27,7 @@ export default function TextEditor({
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
+  const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
 
   const [cursorPosition, setCursorPosition] = useState<number>(0);
 
@@ -49,8 +50,36 @@ export default function TextEditor({
   const currentItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Check for microphone availability on component mount
+    const checkMicrophoneAccess = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasMicrophone = devices.some(
+          (device) => device.kind === "audioinput"
+        );
+        setIsMicConnected(hasMicrophone);
+      } catch (error) {
+        console.error("Error checking microphone:", error);
+        setIsMicConnected(false);
+      }
+    };
+
+    checkMicrophoneAccess();
+
+    // Listen for device changes
+    const handleDeviceChange = () => {
+      checkMicrophoneAccess();
+    };
+
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+
     return () => {
       // Cleanup on unmount
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        handleDeviceChange
+      );
+
       if (wsRef.current) {
         wsRef.current.close();
       }
@@ -123,6 +152,18 @@ export default function TextEditor({
           noiseSuppression: true,
         },
       });
+
+      // Monitor microphone connection status
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        setIsMicConnected(true);
+        audioTrack.onended = () => {
+          console.log("Microphone disconnected");
+          setIsMicConnected(false);
+          setStatus("Microphone disconnected");
+          stopRecording();
+        };
+      }
 
       // Create WebSocket connection with dynamic URL for production
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -368,7 +409,6 @@ export default function TextEditor({
         wsRef.current = null;
       }
 
-      // Insert the current transcript at the saved cursor position
       if (transcript.trim()) {
         const before = accumulatedTranscript.slice(0, cursorPosition);
         const after = accumulatedTranscript.slice(cursorPosition);
@@ -379,7 +419,7 @@ export default function TextEditor({
           (after && !after.startsWith(" ") ? " " : "") +
           after;
         setAccumulatedTranscript(newTranscript);
-        setTranscript(""); // Clear transcript after accumulating
+        setTranscript("");
       }
 
       setIsMicOn(false);
@@ -399,22 +439,28 @@ export default function TextEditor({
 
   return (
     <div>
-      <Card className="w-full min-h-screen bg-red">
+      <Card className="w-full min-h-screen pt-0 ">
         <CardHeader
-          className={`flex items-center border-b-4 justify-center transition-colors ${
-            isMicOn ? "border-green-500" : "border-red-500"
+          className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
+            isMicOn && isMicConnected
+              ? "border-green-500 bg-green-50"
+              : "border-red-500 bg-red-50"
           }`}
         >
           <div className="flex flex-col justify-center items-center">
             <div className="relative mb-2">
-              {isMicOn && (
+              {isMicOn && isMicConnected && (
                 <>
-                  <span className="absolute inset-0 rounded-full bg-[#f05656] animate-[breathe_2s_ease-in-out_infinite]"></span>
-                  <span className="absolute inset-0 rounded-full bg-[#f05656] animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
+                  <span className="absolute inset-0 rounded-full bg-green-500 animate-[breathe_2s_ease-in-out_infinite]"></span>
+                  <span className="absolute inset-0 rounded-full bg-green-500 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
                 </>
               )}
               <Button
-                className="bg-[#f05656] hover:bg-[#f05656] h-[50px] w-[50px] rounded-full relative z-10"
+                className={`${
+                  isMicOn && isMicConnected
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-[#f05656] hover:bg-[#f05656]"
+                } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
                 onClick={handleToggleRecording}
               >
                 <FontAwesomeIcon

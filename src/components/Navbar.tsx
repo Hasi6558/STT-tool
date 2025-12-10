@@ -17,7 +17,7 @@ export default function Navbar({ onPDFDownload }: NavbarProps) {
             icon={faMicrophone}
             className="bg-[#30c2a1] text-white p-1.5 sm:p-2 border rounded-lg mr-1 sm:mr-2"
           />
-          <span className="font-bold text-xs sm:text-sm md:text-lg">
+          <span className="font-bold text-xs sm:text-sm md:text-xl">
             Speech to Text Writing Tool
           </span>
         </div>
