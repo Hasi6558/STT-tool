@@ -443,23 +443,23 @@ export default function TextEditor({
         <CardHeader
           className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
             isMicOn && isMicConnected
-              ? "border-green-500 bg-green-50"
-              : "border-red-500 bg-red-50"
+              ? "border-green-600 bg-green-500"
+              : "border-red-600 bg-red-400"
           }`}
         >
           <div className="flex flex-col justify-center items-center">
             <div className="relative mb-2">
               {isMicOn && isMicConnected && (
                 <>
-                  <span className="absolute inset-0 rounded-full bg-green-500 animate-[breathe_2s_ease-in-out_infinite]"></span>
-                  <span className="absolute inset-0 rounded-full bg-green-500 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
+                  <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
+                  <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
                 </>
               )}
               <Button
                 className={`${
                   isMicOn && isMicConnected
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-[#f05656] hover:bg-[#f05656]"
+                    ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                    : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
                 } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
                 onClick={handleToggleRecording}
               >
@@ -469,7 +469,7 @@ export default function TextEditor({
                 />
               </Button>
             </div>
-            <span className="text-gray-600 mb-4">{status}</span>
+            <span className="text-white mb-4">{status}</span>
           </div>
         </CardHeader>
         <CardContent className="relative flex items-center justify-center">
