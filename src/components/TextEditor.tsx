@@ -439,7 +439,7 @@ export default function TextEditor({
 
   return (
     <div>
-      <Card className="w-full min-h-screen pt-0 ">
+      <Card className="w-full pt-0 ">
         <CardHeader
           className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
             isMicOn && isMicConnected
@@ -491,10 +491,10 @@ export default function TextEditor({
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
               }
-              disabled={isMicOn}
+           
               ref={textareaRef}
               className={
-                "h-[60vh] sm:h-[65vh] lg:h-[75vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
+                "h-[55vh] md:h-[45vh] lg:h-[55vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
               }
               value={
                 accumulatedTranscript && transcript

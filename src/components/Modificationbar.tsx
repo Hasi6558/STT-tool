@@ -94,8 +94,8 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
 
     return (
       <div className="">
-        <Card className="min-h-screen">
-          <CardHeader className="flex flex-wrap items-center border-b border-gray-300 justify-start pb-2 sm:pb-4 gap-2 sm:gap-3">
+        <Card className="min-h-[50vh]">
+          <CardHeader className="flex flex-wrap items-center border-b border-gray-300 justify-start pb-2 sm:pb-4  gap-2 sm:gap-3">
             <div
               className={`p-1 border-[3px] rounded-xl transition-all ${
                 selectedBtn === "clean"
@@ -153,7 +153,7 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
             </div>
           </CardHeader>
           <CardContent className="flex items-center border-gray-300 justify-center pb-2 sm:pb-4">
-            <div className="bg-[#f3f4f6] w-full h-[60vh] sm:h-[65vh] lg:h-[75vh] p-2 sm:p-4 md:p-6 rounded-md overflow-auto whitespace-pre-wrap !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg">
+            <div className="bg-[#f3f4f6] w-full h-[57vh] sm:h-[55vh] md:h-[46vh] lg:h-[56vh] p-2 sm:p-4 md:p-6 rounded-md overflow-auto whitespace-pre-wrap !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg">
               {loading ? <Spinner /> : <span>{modifiedText.result}</span>}
             </div>
           </CardContent>
