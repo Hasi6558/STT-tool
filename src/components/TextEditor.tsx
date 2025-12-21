@@ -509,7 +509,7 @@ export default function TextEditor({
                   }
                   ref={textareaRef}
                   className={
-                    "h-[55vh] md:h-[45vh] lg:h-[55vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
+                    "h-[55vh] md:h-[45vh] lg:h-[55vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black focus:caret-black"
                   }
                   disabled={false}
                   value={accumulatedTranscript}
