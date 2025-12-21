@@ -19,35 +19,46 @@ interface TextEditorProps {
 }
 
 export default function TextEditor({
-  isModificationBarOpen,
-  setIsModificationBarOpen,
-  accumulatedTranscript,
-  setAccumulatedTranscript,
-}: TextEditorProps) {
+                                     isModificationBarOpen,
+                                     setIsModificationBarOpen,
+                                     accumulatedTranscript,
+                                     setAccumulatedTranscript,
+                                   }: TextEditorProps) {
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
 
   const [cursorPosition, setCursorPosition] = useState<number>(0);
+  const textRef = useRef(accumulatedTranscript);
 
   const wsRef = useRef<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<{ stop: () => void; state: string } | null>(
-    null
+      null
   );
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const transcriptItemsRef = useRef<
-    Map<
-      string,
-      {
-        text: string;
-        previousItemId: string | null;
-      }
-    >
+      Map<
+          string,
+          {
+            text: string;
+            previousItemId: string | null;
+          }
+      >
   >(new Map());
   const currentItemIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    textRef.current = accumulatedTranscript;
+  }, [accumulatedTranscript]);
+  // Auto-scroll to bottom when transcript changes
+  useEffect(() => {
+    if (textareaRef.current && isMicOn) {
+      textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+    }
+  }, [transcript, accumulatedTranscript, isMicOn]);
 
   useEffect(() => {
     // Check for microphone availability on component mount
@@ -55,7 +66,7 @@ export default function TextEditor({
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const hasMicrophone = devices.some(
-          (device) => device.kind === "audioinput"
+            (device) => device.kind === "audioinput"
         );
         setIsMicConnected(hasMicrophone);
       } catch (error) {
@@ -76,16 +87,16 @@ export default function TextEditor({
     return () => {
       // Cleanup on unmount
       navigator.mediaDevices.removeEventListener(
-        "devicechange",
-        handleDeviceChange
+          "devicechange",
+          handleDeviceChange
       );
 
       if (wsRef.current) {
         wsRef.current.close();
       }
       if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
+          mediaRecorderRef.current &&
+          mediaRecorderRef.current.state !== "inactive"
       ) {
         mediaRecorderRef.current.stop();
       }
@@ -128,6 +139,30 @@ export default function TextEditor({
 
     return orderedTexts.join(" ");
   };
+  const insertTextAtCursor = (text: string) => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    const fullText = textRef.current;
+
+    const newText =
+        fullText.slice(0, start) +
+        text +
+        " " +
+        fullText.slice(end);
+
+    setAccumulatedTranscript(newText);
+
+    requestAnimationFrame(() => {
+      textarea.selectionStart =
+          textarea.selectionEnd =
+              start + text.length + 1;
+    });
+  };
+
 
   const startRecording = async () => {
     try {
@@ -199,7 +234,7 @@ export default function TextEditor({
                 previousItemId: data.previous_item_id || null,
               });
               console.log(
-                `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`
+                  `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`
               );
             }
             setStatus("Processing speech...");
@@ -218,32 +253,13 @@ export default function TextEditor({
                   previousItemId: null,
                 });
               }
-              // Batch updates - only update transcript every few deltas to reduce re-renders
-              setTranscript(rebuildTranscript());
             }
             break;
 
           case "conversation.item.input_audio_transcription.completed":
-            // Final transcription for this segment
-            if (data.transcript && data.item_id) {
-              const item = transcriptItemsRef.current.get(data.item_id);
-              if (item) {
-                item.text = data.transcript;
-                console.log(
-                  `Completed transcription for ${data.item_id}: "${data.transcript}"`
-                );
-                setTranscript(rebuildTranscript());
-              } else {
-                // Fallback if item wasn't tracked
-                console.log(
-                  `Item ${data.item_id} not tracked, adding with transcript: "${data.transcript}"`
-                );
-                transcriptItemsRef.current.set(data.item_id, {
-                  text: data.transcript,
-                  previousItemId: null,
-                });
-                setTranscript(rebuildTranscript());
-              }
+
+            if (data.transcript) {
+              insertTextAtCursor(data.transcript);
             }
             setStatus("Recording...");
             break;
@@ -267,8 +283,8 @@ export default function TextEditor({
                   console.log("Content item:", content);
                   if (content.type === "input_audio" && content.transcript) {
                     console.log(
-                      "Found transcript in item.created:",
-                      content.transcript
+                        "Found transcript in item.created:",
+                        content.transcript
                     );
                     const item = transcriptItemsRef.current.get(itemId);
                     if (item) {
@@ -351,18 +367,18 @@ export default function TextEditor({
           const chunkSize = 0x8000; // Process in chunks to avoid stack overflow
           for (let i = 0; i < uint8Array.length; i += chunkSize) {
             binary += String.fromCharCode.apply(
-              null,
-              Array.from(uint8Array.subarray(i, i + chunkSize))
+                null,
+                Array.from(uint8Array.subarray(i, i + chunkSize))
             );
           }
           const base64Audio = btoa(binary);
 
           // Send audio data to server
           ws.send(
-            JSON.stringify({
-              type: "audio",
-              audio: base64Audio,
-            })
+              JSON.stringify({
+                type: "audio",
+                audio: base64Audio,
+              })
           );
         }
       };
@@ -381,7 +397,7 @@ export default function TextEditor({
     } catch (error) {
       console.error("Error starting recording:", error);
       setStatus(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`
       );
       setIsMicOn(false);
     }
@@ -391,8 +407,8 @@ export default function TextEditor({
     try {
       // Stop media recorder
       if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
+          mediaRecorderRef.current &&
+          mediaRecorderRef.current.state !== "inactive"
       ) {
         mediaRecorderRef.current.stop();
       }
@@ -413,11 +429,11 @@ export default function TextEditor({
         const before = accumulatedTranscript.slice(0, cursorPosition);
         const after = accumulatedTranscript.slice(cursorPosition);
         const newTranscript =
-          before +
-          (before && !before.endsWith(" ") ? " " : "") +
-          transcript +
-          (after && !after.startsWith(" ") ? " " : "") +
-          after;
+            before +
+            (before && !before.endsWith(" ") ? " " : "") +
+            transcript +
+            (after && !after.startsWith(" ") ? " " : "") +
+            after;
         setAccumulatedTranscript(newTranscript);
         setTranscript("");
       }
@@ -438,100 +454,84 @@ export default function TextEditor({
   };
 
   return (
-    <div>
-      <Card className="w-full pt-0 ">
-        <CardHeader
-          className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
-            isMicOn && isMicConnected
-              ? "border-green-600 bg-green-500"
-              : "border-red-600 bg-red-400"
-          }`}
-        >
-          <div className="flex flex-col justify-center items-center">
-            <div className="relative mb-2">
-              {isMicOn && isMicConnected && (
-                <>
-                  <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
-                  <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
-                </>
-              )}
-              <Button
-                className={`${
+      <div>
+        <Card className="w-full pt-0 ">
+          <CardHeader
+              className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
                   isMicOn && isMicConnected
-                    ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                    : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
-                onClick={handleToggleRecording}
-              >
-                <FontAwesomeIcon
-                  className=" text-white"
-                  icon={isMicOn ? faMicrophoneLines : faMicrophoneLinesSlash}
-                />
-              </Button>
+                      ? "border-green-600 bg-green-500"
+                      : "border-red-600 bg-red-400"
+              }`}
+          >
+            <div className="flex flex-col justify-center items-center">
+              <div className="relative mb-2">
+                {isMicOn && isMicConnected && (
+                    <>
+                      <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
+                      <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
+                    </>
+                )}
+                <Button
+                    className={`${
+                        isMicOn && isMicConnected
+                            ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                            : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                    } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
+                    onClick={handleToggleRecording}
+                >
+                  <FontAwesomeIcon
+                      className=" text-white"
+                      icon={isMicOn ? faMicrophoneLines : faMicrophoneLinesSlash}
+                  />
+                </Button>
+              </div>
+              <span className="text-white mb-4">{status}</span>
             </div>
-            <span className="text-white mb-4">{status}</span>
-          </div>
-        </CardHeader>
-        <CardContent className="relative flex items-center justify-center">
-          <div className="w-full">
-            <div className="absolute top-0 right-0 flex items-start pt-2 sm:pt-4 hidden lg:flex">
-              <Button
-                className="h-12 w-6 sm:h-16 sm:w-8 rounded-l-lg rounded-r-none bg-zinc-200 hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
-                onClick={() => setIsModificationBarOpen(!isModificationBarOpen)}
-                title={isModificationBarOpen ? "Close sidebar" : "Open sidebar"}
-              >
-                <FontAwesomeIcon
-                  icon={isModificationBarOpen ? faChevronRight : faChevronLeft}
-                  className="text-xs sm:text-sm text-black"
-                />
-              </Button>
-            </div>
+          </CardHeader>
+          <CardContent className="relative flex items-center justify-center">
+            <div className="w-full">
+              <div className="absolute top-0 right-0 flex items-start pt-2 sm:pt-4 hidden lg:flex">
+                <Button
+                    className="h-12 w-6 sm:h-16 sm:w-8 rounded-l-lg rounded-r-none bg-zinc-200 hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
+                    onClick={() => setIsModificationBarOpen(!isModificationBarOpen)}
+                    title={isModificationBarOpen ? "Close sidebar" : "Open sidebar"}
+                >
+                  <FontAwesomeIcon
+                      icon={isModificationBarOpen ? faChevronRight : faChevronLeft}
+                      className="text-xs sm:text-sm text-black"
+                  />
+                </Button>
+              </div>
 
-            <Textarea
-              placeholder={
-                "No transcript yet. Click the microphone to start recording."
-              }
-           
-              ref={textareaRef}
-              className={
-                "h-[55vh] md:h-[45vh] lg:h-[55vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
-              }
-              value={
-                accumulatedTranscript && transcript
-                  ? (() => {
-                      const before = accumulatedTranscript.slice(
-                        0,
-                        cursorPosition
-                      );
-                      const after = accumulatedTranscript.slice(cursorPosition);
-                      return (
-                        before +
-                        (before && !before.endsWith(" ") ? " " : "") +
-                        transcript +
-                        (after && !after.startsWith(" ") ? " " : "") +
-                        after
-                      );
-                    })()
-                  : accumulatedTranscript || transcript
-              }
-              onChange={(e) => {
-                setAccumulatedTranscript(e.target.value);
-                setCursorPosition(e.target.selectionStart);
-              }}
-              onClick={() => {
-                if (textareaRef.current) {
-                  setCursorPosition(textareaRef.current.selectionStart);
-                }
-              }}
-              onKeyUp={() => {
-                if (textareaRef.current) {
-                  setCursorPosition(textareaRef.current.selectionStart);
-                }
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              <Textarea
+                  placeholder={
+                    "No transcript yet. Click the microphone to start recording."
+                  }
+                  ref={textareaRef}
+                  className={
+                    "h-[55vh] md:h-[45vh] lg:h-[55vh] px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg"
+                  }
+                  disabled={false}
+                  value={accumulatedTranscript}
+                  onChange={(e) => {
+                    setAccumulatedTranscript(e.target.value);
+                    setCursorPosition(e.target.selectionStart);
+                  }}
+
+                  onClick={() => {
+                    if (textareaRef.current) {
+                      setCursorPosition(textareaRef.current.selectionStart);
+                    }
+                  }}
+                  onKeyUp={() => {
+                    if (textareaRef.current) {
+                      setCursorPosition(textareaRef.current.selectionStart);
+                    }
+                  }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
   );
 }
