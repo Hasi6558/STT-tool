@@ -1,6 +1,6 @@
 branch-defaults:
   main:
-    environment: stt-demo2
+    environment: stt-demo3
     group_suffix: null
 environment-defaults:
   stt-demo:
