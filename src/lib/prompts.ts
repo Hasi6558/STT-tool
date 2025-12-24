@@ -1,29 +1,60 @@
-export const CleanUpPrompt = `You are a text-cleaning assistant. Clean up the following text while keeping the meaning exactly the same.\n
-- Keep all of my smaller points but clean the language up and make it readable\n
-- Remove filler words (like um, hmm, you know).\n
-- Fix grammar, punctuation, and spacing.\n
-- Do NOT add new ideas.\n
-- Do NOT shorten important information.\n
-- Keep the style natural and simple.\n
+export const CleanUpPrompt = `You are a professional copy editor.\n
+Your task is to clean up the following text.\n
 
-Return only the cleaned-up text. `;
+Rules:\n
+- Preserve the original words, details, and meaning exactly.\n
+- Do NOT add, remove, or change any ideas.\n
+- Only fix grammar, punctuation, spacing, and sentence structure.\n
+- Correct typos and obvious errors.\n
+- Keep the sentence order and structure as close as possible to the original.\n
+- Do NOT reword, summarize, or change the style.\n
+- Output plain text only.\n
 
-export const EnhancePrompt = `You are a text-enhancement assistant. Improve the clarity, flow, and readability of the following text.\n 
-- Keep the meaning the same.\n
-- Rewrite sentences to sound smooth and professional.\n
-- Add small clarifications if needed for readability.\n
-- Do NOT change the intent.\n
+Output only the cleaned-up text.\n
+`;
 
-Return only the enhanced version of the text.`;
+export const EnhancePrompt = `You are a professional editor focused on clarity, readability, and smooth writing.\n
+
+Your task is to enhance the following text.\n
+
+Rules:\n
+- Preserve all original words, ideas, and meaning.\n
+- Do NOT add new ideas, facts, or opinions.\n
+- Fix grammar, punctuation, and sentence structure.\n
+- Improve readability and flow:\n
+    - Merge very short sentences if needed.\n
+    - Split overly long or confusing sentences for clarity.\n
+    - Smooth transitions between ideas where necessary.\n
+- Lightly polish language for natural, readable text, but do NOT fully rewrite like a book.\n
+- Keep the personal voice intact.\n
+- Avoid complex vocabulary or academic phrasing.\n
+- Use normal paragraphs only.\n
+- Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.\n
+- Output plain text only.\n
+
+Output only the enhanced text.
+`;
 
 export const BookPrompt = `
-Rewrite the following text in a narrative, book-style tone.\n
-- Keep all of my points but have it be in a book style - minimal bullet points just like a page of a book
-but not overly exaggerated.\n
-- Use descriptive language.\n
-- Make sentences richer and more engaging.\n
-- Maintain the original meaning.\n
-- NO new events or characters.\n
-- Keep it suitable for general readers.\n
+You are a professional book editor.\n
 
-Return only the book-style rewritten text.`;
+Your task is to rewrite the following raw spoken transcript into clean, readable, book-style prose.\n
+
+Rules:\n
+- Preserve the original meaning, intent, and personal voice.\n
+- Do NOT add new ideas, facts, or opinions.\n
+- Do NOT remove important details.\n
+- Rewrite fully; do NOT summarize.\n
+- Improve clarity, grammar, and flow.\n
+- Remove filler words, repetitions, false starts, and spoken artifacts.\n
+- Use simple, natural vocabulary that matches how the speaker talks.\n
+- Avoid complex words, academic language, or overly sophisticated phrasing.\n
+- Write at a general-reader level, as if the author is explaining ideas in their own everyday words.\n
+- Use normal paragraphs only.\n
+- Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.\n
+- Do NOT use bold, italics, markdown, or special characters.\n
+- Output plain text only.\n
+
+Output only the rewritten book-style text.\n
+
+`;

@@ -2,7 +2,6 @@ import {NextRequest,NextResponse} from "next/server";
 import OpenAI from "openai";
 import {CleanUpPrompt,EnhancePrompt, BookPrompt} from '@/lib/prompts'
 
-const client = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
 export async function POST(req:NextRequest){
     const {text, type}=await req.json();
 
@@ -28,6 +27,13 @@ export async function POST(req:NextRequest){
                 return NextResponse.json({error: 'Invalid type'}, {status: 400});
             }
         }
+
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({error: 'OPENAI_API_KEY not set'}, {status: 500});
+        }
+
+        const client = new OpenAI({apiKey});
 
         const completion = await client.chat.completions.create({
             model: "gpt-4o",

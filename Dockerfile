@@ -1,48 +1,23 @@
-# syntax = docker/dockerfile:1
+# 1. Use Node image
+FROM node:20-alpine
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=22.20.0
-FROM node:${NODE_VERSION}-slim AS base
-
-LABEL fly_launch_runtime="Next.js"
-
-# Next.js app lives here
+# 2. Set working directory
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
+# 3. Copy package files
+COPY package*.json ./
 
+# 4. Install dependencies
+RUN npm install
 
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
-
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci --include=dev
-
-# Copy application code
+# 5. Copy rest of the code
 COPY . .
 
-# Build application
-RUN npx next build --experimental-build-mode compile
+# 6. Build Next.js
+RUN npm run build
 
-# Remove development dependencies
-RUN npm prune --omit=dev
-
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Entrypoint sets up the container.
-ENTRYPOINT [ "/app/docker-entrypoint.js" ]
-
-# Start the server by default, this can be overwritten at runtime
+# 7. Expose port
 EXPOSE 3000
-CMD [ "npm", "run", "start" ]
+
+# 8. Start Next.js
+CMD ["npm", "run", "dev"]
