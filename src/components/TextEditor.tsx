@@ -55,9 +55,19 @@ export default function TextEditor({
   }, [accumulatedTranscript]);
 
   useEffect(() => {
-    // Check for microphone availability on component mount
+    // Check for microphone availability on component mount (guard for server and unsupported browsers)
     const checkMicrophoneAccess = async () => {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        setIsMicConnected(false);
+        return;
+      }
+
       try {
+        if (typeof navigator.mediaDevices.enumerateDevices !== "function") {
+          setIsMicConnected(false);
+          return;
+        }
+
         const devices = await navigator.mediaDevices.enumerateDevices();
         const hasMicrophone = devices.some(
           (device) => device.kind === "audioinput"
@@ -69,35 +79,72 @@ export default function TextEditor({
       }
     };
 
-    checkMicrophoneAccess();
-
-    // Listen for device changes
-    const handleDeviceChange = () => {
+    // Only run checks in a browser environment
+    if (typeof window !== "undefined") {
       checkMicrophoneAccess();
-    };
 
-    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+      // Listen for device changes (only if supported)
+      const handleDeviceChange = () => {
+        checkMicrophoneAccess();
+      };
 
-    return () => {
-      // Cleanup on unmount
-      navigator.mediaDevices.removeEventListener(
-        "devicechange",
-        handleDeviceChange
-      );
-
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
       if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
+        navigator.mediaDevices &&
+        typeof navigator.mediaDevices.addEventListener === "function"
       ) {
-        mediaRecorderRef.current.stop();
+        navigator.mediaDevices.addEventListener(
+          "devicechange",
+          handleDeviceChange
+        );
+
+        return () => {
+          // Cleanup on unmount
+          try {
+            navigator.mediaDevices.removeEventListener(
+              "devicechange",
+              handleDeviceChange
+            );
+          } catch (e) {
+            // ignore
+          }
+
+          if (wsRef.current) {
+            wsRef.current.close();
+          }
+          if (
+            mediaRecorderRef.current &&
+            mediaRecorderRef.current.state !== "inactive"
+          ) {
+            mediaRecorderRef.current.stop();
+          }
+          if (audioContextRef.current) {
+            audioContextRef.current.close();
+          }
+        };
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
+    }
+
+    // If devicechange isn't supported, still return a cleanup that closes resources
+    if (
+      typeof window !== "undefined" &&
+      (!navigator.mediaDevices ||
+        typeof navigator.mediaDevices.addEventListener !== "function")
+    ) {
+      return () => {
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+        if (
+          mediaRecorderRef.current &&
+          mediaRecorderRef.current.state !== "inactive"
+        ) {
+          mediaRecorderRef.current.stop();
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
+      };
+    }
   }, []);
 
   // Helper function to rebuild transcript in correct order
@@ -165,7 +212,18 @@ export default function TextEditor({
       currentItemIdRef.current = null;
       setTranscript("");
 
-      // Request microphone access
+      // Request microphone access (guard for environments without mediaDevices)
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !== "function"
+      ) {
+        setStatus("Microphone not available");
+        setIsMicConnected(false);
+        setIsMicOn(false);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
