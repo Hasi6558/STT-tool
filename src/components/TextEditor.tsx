@@ -29,7 +29,8 @@ export default function TextEditor({
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
 
-  const [cursorPosition, setCursorPosition] = useState<number>(0);
+  const cursorRef = useRef<number | null>(null);
+
   const textRef = useRef(accumulatedTranscript);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -180,21 +181,35 @@ export default function TextEditor({
 
     return orderedTexts.join(" ");
   };
+
   const insertTextAtCursor = (text: string) => {
-    if (!textareaRef.current) return;
-
     const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    if (!textarea) return;
 
-    const fullText = textRef.current;
+    // Always use the most recent cursor position
+    const start = cursorRef.current ?? textarea.value.length;
+    const end = start;
+
+    // CRITICAL: Use textRef.current as the source of truth, not textarea.value
+    // This ensures we always work with the most up-to-date text
+    const fullText = textRef.current ?? "";
 
     const newText = fullText.slice(0, start) + text + " " + fullText.slice(end);
 
+    // Update ref FIRST (synchronously)
+    textRef.current = newText;
+
+    // Then update state
     setAccumulatedTranscript(newText);
 
+    // Update cursor position immediately (synchronously, not in RAF)
+    const newPos = start + text.length + 1;
+    cursorRef.current = newPos;
+
+    // Update textarea selection in next frame
     requestAnimationFrame(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length + 1;
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = newPos;
     });
   };
 
@@ -204,7 +219,7 @@ export default function TextEditor({
 
       // Save cursor position before starting recording
       if (textareaRef.current) {
-        setCursorPosition(textareaRef.current.selectionStart);
+        cursorRef.current = textareaRef.current.selectionStart;
       }
 
       // Clear current session transcript items but keep accumulated transcript
@@ -470,8 +485,11 @@ export default function TextEditor({
       }
 
       if (transcript.trim()) {
-        const before = accumulatedTranscript.slice(0, cursorPosition);
-        const after = accumulatedTranscript.slice(cursorPosition);
+        const currentFull = textareaRef.current
+          ? textareaRef.current.value
+          : textRef.current ?? accumulatedTranscript ?? "";
+        const before = currentFull.slice(0, cursorRef.current ?? 0);
+        const after = currentFull.slice(cursorRef.current ?? 0);
         const newTranscript =
           before +
           (before && !before.endsWith(" ") ? " " : "") +
@@ -479,6 +497,7 @@ export default function TextEditor({
           (after && !after.startsWith(" ") ? " " : "") +
           after;
         setAccumulatedTranscript(newTranscript);
+        textRef.current = newTranscript;
         setTranscript("");
       }
 
@@ -558,17 +577,19 @@ export default function TextEditor({
               disabled={false}
               value={accumulatedTranscript}
               onChange={(e) => {
+                cursorRef.current = e.target.selectionStart;
                 setAccumulatedTranscript(e.target.value);
-                setCursorPosition(e.target.selectionStart);
+                // keep ref in sync synchronously to avoid stale reads
+                textRef.current = e.target.value;
               }}
               onClick={() => {
                 if (textareaRef.current) {
-                  setCursorPosition(textareaRef.current.selectionStart);
+                  cursorRef.current = textareaRef.current.selectionStart;
                 }
               }}
               onKeyUp={() => {
                 if (textareaRef.current) {
-                  setCursorPosition(textareaRef.current.selectionStart);
+                  cursorRef.current = textareaRef.current.selectionStart;
                 }
               }}
             />
