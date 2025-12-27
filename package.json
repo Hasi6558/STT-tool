@@ -30,9 +30,10 @@
     "openai": "^6.10.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-feather": "^2.0.10",
     "tailwind-merge": "^3.4.0",
-    "ws": "^8.18.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.10",

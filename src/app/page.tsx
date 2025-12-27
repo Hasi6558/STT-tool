@@ -5,10 +5,14 @@ import Modificationbar, {
 } from "@/components/Modificationbar";
 import Navbar from "@/components/Navbar";
 import { useRef, useState } from "react";
+import PointSeparator from "@/components/PointSeperator";
 
 export default function Home() {
   const modificationbarRef = useRef<ModificationbarRef>(null);
   const [isModificationBarOpen, setIsModificationBarOpen] = useState(true);
+  const [isMicSectionOpen, setIsMicSectionOpen] = useState(true);
+  const [isPointSeparatorOpen, setIsPointSeparatorOpen] = useState(true);
+
   const [showModificationOnMobile, setShowModificationOnMobile] =
     useState(false);
   const [accumulatedTranscript, setAccumulatedTranscript] =
@@ -51,14 +55,20 @@ export default function Home() {
           <div
             className={`transition-all duration-300 ${
               isModificationBarOpen ? "flex-1" : "flex-[1_1_100%]"
-            } ${showModificationOnMobile ? "hidden lg:block" : "block"}`}
+            } ${showModificationOnMobile ? "hidden lg:block" : "block"} ${
+              !isMicSectionOpen ? "w-[46px] flex-none" : ""
+            }`}
           >
             <TextEditor
-              isModificationBarOpen={isModificationBarOpen}
-              setIsModificationBarOpen={setIsModificationBarOpen}
+              isMicSectionOpen={isMicSectionOpen}
+              setIsMicSectionOpen={setIsMicSectionOpen}
               accumulatedTranscript={accumulatedTranscript}
               setAccumulatedTranscript={setAccumulatedTranscript}
             />
+          </div>
+          <div>
+            {/* point separator */}
+            <PointSeparator />
           </div>
 
           {/* Modificationbar - Shows based on mobile toggle or desktop open state */}
