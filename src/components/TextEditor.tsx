@@ -519,21 +519,21 @@ export default function TextEditor({
   };
 
   return (
-    <div>
+    <div className="h-full">
       <style>{`
-        textarea::-webkit-scrollbar {
-          width: 6px;
-        }
-        textarea::-webkit-scrollbar-thumb {
-          background-color: rgb(156 163 175);
-          border-radius: 3px;
-        }
-        textarea::-webkit-scrollbar-track {
-          background: transparent;
-        }
-      `}</style>
+      textarea::-webkit-scrollbar {
+        width: 6px;
+      }
+      textarea::-webkit-scrollbar-thumb {
+        background-color: rgb(156 163 175);
+        border-radius: 3px;
+      }
+      textarea::-webkit-scrollbar-track {
+        background: transparent;
+      }
+    `}</style>
       <Card
-        className={`relative w-full shadow-none pt-0 group ${
+        className={`relative w-full h-full shadow-none  pt-0 overflow-hidden ${
           !isMicSectionOpen ? "hover:bg-gray-100 " : ""
         }`}
         onClick={() => {
@@ -545,45 +545,43 @@ export default function TextEditor({
         {isMicSectionOpen ? (
           <>
             <CardHeader
-              className={`flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
+              className={`relative flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors ${
                 isMicOn && isMicConnected
                   ? "border-green-600 bg-green-500"
                   : "border-red-600 bg-red-400"
               }`}
             >
-              <div className="flex flex-col justify-center items-center">
-                <div className="relative mb-2">
-                  {isMicOn && isMicConnected && (
-                    <>
-                      <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
-                      <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
-                    </>
-                  )}
-                  <Button
-                    className={`${
-                      isMicOn && isMicConnected
-                        ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                        : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                    } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
-                    onClick={handleToggleRecording}
-                  >
-                    <FontAwesomeIcon
-                      className=" text-white"
-                      icon={
-                        isMicOn ? faMicrophoneLines : faMicrophoneLinesSlash
-                      }
-                    />
-                  </Button>
-                </div>
-                <span className="text-white mb-4">{status}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="relative flex items-center justify-center transition-all duration-300">
-              <div className="w-full">
-                {isMicSectionOpen && (
-                  <div className="absolute top-0 right-0 flex items-start pt-2 sm:pt-4 hidden lg:flex">
+              <div>
+                <div className="flex flex-col justify-center items-center">
+                  <div className="relative mb-2">
+                    {isMicOn && isMicConnected && (
+                      <>
+                        <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
+                        <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite] [animation-delay:0.5s]"></span>
+                      </>
+                    )}
                     <Button
-                      className="h-12 w-6 sm:h-16 sm:w-8 rounded-l-lg rounded-r-none bg-zinc-200 hover:bg-zinc-300 shadow-md text-zinc-300 transition-all"
+                      className={`${
+                        isMicOn && isMicConnected
+                          ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                          : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                      } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
+                      onClick={handleToggleRecording}
+                    >
+                      <FontAwesomeIcon
+                        className=" text-white"
+                        icon={
+                          isMicOn ? faMicrophoneLines : faMicrophoneLinesSlash
+                        }
+                      />
+                    </Button>
+                  </div>
+                  <span className="text-white mb-4">{status}</span>
+                </div>
+                {isMicSectionOpen && (
+                  <div className="absolute top-0 right-4 flex items-start pt-2 sm:pt-4 hidden lg:flex ">
+                    <Button
+                      className="h-8 w-8 sm:h-8 sm:w-8 bg-zinc-100 hover:bg-zinc-300 shadow-md text-zinc-300 opacity-50 hover:opacity-100 transition-all"
                       onClick={() => setIsMicSectionOpen(!isMicSectionOpen)}
                       title={"Close sidebar"}
                     >
@@ -594,7 +592,10 @@ export default function TextEditor({
                     </Button>
                   </div>
                 )}
-
+              </div>
+            </CardHeader>
+            <CardContent className="relative flex items-center justify-center transition-all duration-300">
+              <div className="w-full">
                 <Textarea
                   placeholder={
                     "No transcript yet. Click the microphone to start recording."
@@ -612,7 +613,6 @@ export default function TextEditor({
                   onChange={(e) => {
                     cursorRef.current = e.target.selectionStart;
                     setAccumulatedTranscript(e.target.value);
-                    // keep ref in sync synchronously to avoid stale reads
                     textRef.current = e.target.value;
                   }}
                   onClick={() => {
@@ -630,8 +630,8 @@ export default function TextEditor({
             </CardContent>
           </>
         ) : (
-          <div>
-            <CardContent className="hover:bg-gray-100 transition-all duration-300">
+          <div className="h-full overflow-hidden">
+            <CardContent className="hover:bg-gray-100 transition-all duration-300 h-full overflow-hidden">
               <div className="h-[78vh] flex flex-col items-center justify-center ">
                 <div className="flex flex-col items-center justify-center">
                   <div className="text-gray-500 ">

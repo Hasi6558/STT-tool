@@ -6,12 +6,14 @@ import Modificationbar, {
 import Navbar from "@/components/Navbar";
 import { useRef, useState } from "react";
 import PointSeparator from "@/components/PointSeperator";
+import RefinePannel from "@/components/RefinePannel";
 
 export default function Home() {
   const modificationbarRef = useRef<ModificationbarRef>(null);
   const [isModificationBarOpen, setIsModificationBarOpen] = useState(true);
   const [isMicSectionOpen, setIsMicSectionOpen] = useState(true);
   const [isPointSeparatorOpen, setIsPointSeparatorOpen] = useState(true);
+  const [isRefinePannelOpen, setIsRefinePannelOpen] = useState(true);
 
   const [showModificationOnMobile, setShowModificationOnMobile] =
     useState(false);
@@ -25,8 +27,8 @@ export default function Home() {
   return (
     <>
       <Navbar onPDFDownload={handleDownloadPDF} />
-      <div className="flex min-h-screen bg-zinc-50 font-sans">
-        <div className="flex flex-col lg:flex-row w-full min-h-screen p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-2 sm:my-4">
+      <div className="flex  bg-zinc-50 font-sans">
+        <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-2 sm:my-4">
           {/* Mobile Toggle Button */}
           <div className="lg:hidden flex justify-center gap-2 mb-2">
             <button
@@ -53,11 +55,9 @@ export default function Home() {
 
           {/* TextEditor - Hidden on mobile when showing modification bar */}
           <div
-            className={`transition-all duration-300 ${
-              isModificationBarOpen ? "flex-1" : "flex-[1_1_100%]"
-            } ${showModificationOnMobile ? "hidden lg:block" : "block"} ${
-              !isMicSectionOpen ? "w-[46px] flex-none" : ""
-            }`}
+            className={`transition-all duration-300 h-full ${
+              isMicSectionOpen ? "flex-1" : "w-[46px] flex-none"
+            } ${showModificationOnMobile ? "hidden lg:block" : "block"}`}
           >
             <TextEditor
               isMicSectionOpen={isMicSectionOpen}
@@ -66,26 +66,36 @@ export default function Home() {
               setAccumulatedTranscript={setAccumulatedTranscript}
             />
           </div>
-          <div>
+          <div
+            className={`transition-all duration-300 h-full ${
+              isPointSeparatorOpen ? "flex-1" : "w-[46px] flex-none"
+            }`}
+          >
             {/* point separator */}
-            <PointSeparator />
+            <PointSeparator
+              isPointSeparatorOpen={isPointSeparatorOpen}
+              setIsPointSeparatorOpen={setIsPointSeparatorOpen}
+            />
           </div>
 
           {/* Modificationbar - Shows based on mobile toggle or desktop open state */}
           <div
-            className={`transition-all duration-300 overflow-hidden ${
+            className={`transition-all duration-300 overflow-hidden h-full ${
               showModificationOnMobile ? "block lg:hidden" : "hidden"
             } lg:block ${
-              isModificationBarOpen
-                ? "lg:flex-1 lg:opacity-100"
-                : "lg:w-0 lg:opacity-0"
+              isRefinePannelOpen ? "lg:flex-1" : "lg:w-[46px] lg:flex-none"
             }`}
           >
             {(showModificationOnMobile || isModificationBarOpen) && (
-              <Modificationbar
-                ref={modificationbarRef}
+              <RefinePannel
                 accumulatedTranscript={accumulatedTranscript}
+                isRefinePannelOpen={isRefinePannelOpen}
+                setIsRefinePannelOpen={setIsRefinePannelOpen}
               />
+              // <Modificationbar
+              //   ref={modificationbarRef}
+              //   accumulatedTranscript={accumulatedTranscript}
+              // />
             )}
           </div>
         </div>
