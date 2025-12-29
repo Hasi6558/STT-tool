@@ -93,17 +93,19 @@ Rules:
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
 - Do NOT remove any ideas or details.
+- Do NOT change the original words or the order of words in the transcript.
 - Do NOT decide what the main argument should be.
-- Preserve the speaker’s original intent and wording as much as possible.
+- Preserve the speaker’s original intent and wording exactly.
 
 What to do:
 1. Identify distinct ideas or themes expressed by the speaker.
 2. Group related ideas together.
 3. For each group:
    - Create a short, neutral heading that summarizes the theme.
-   - Write a clear text block that includes all details, examples, and reasoning the speaker mentioned.
-4. Use simple, neutral language.
-5. Keep the content faithful to what was said, only organizing it for clarity.
+   - Keep all words exactly as in the original transcript.
+   - Place the original text under the heading without changing word order, punctuation, or phrasing.
+4. Use neutral language only for headings; the text must remain unchanged.
+5. Keep the content faithful to what was said, only organizing it under headings.
 
 Output format rules:
 - Output valid JSON only.
@@ -117,5 +119,4 @@ Output format rules:
     "text": "string"
   }
 ]
-
 `;

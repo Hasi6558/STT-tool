@@ -13,7 +13,7 @@ export default function Home() {
   const [isModificationBarOpen, setIsModificationBarOpen] = useState(true);
   const [isMicSectionOpen, setIsMicSectionOpen] = useState(true);
   const [isPointSeparatorOpen, setIsPointSeparatorOpen] = useState(true);
-  const [isRefinePannelOpen, setIsRefinePannelOpen] = useState(true);
+  const [isRefinePannelOpen, setIsRefinePannelOpen] = useState(false);
 
   const [showModificationOnMobile, setShowModificationOnMobile] =
     useState(false);
@@ -75,6 +75,7 @@ export default function Home() {
             <PointSeparator
               isPointSeparatorOpen={isPointSeparatorOpen}
               setIsPointSeparatorOpen={setIsPointSeparatorOpen}
+              accumulatedTranscript={accumulatedTranscript}
             />
           </div>
 
@@ -92,10 +93,6 @@ export default function Home() {
                 isRefinePannelOpen={isRefinePannelOpen}
                 setIsRefinePannelOpen={setIsRefinePannelOpen}
               />
-              // <Modificationbar
-              //   ref={modificationbarRef}
-              //   accumulatedTranscript={accumulatedTranscript}
-              // />
             )}
           </div>
         </div>

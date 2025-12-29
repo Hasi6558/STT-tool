@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import Handlebars from "handlebars";
 import OpenAI from "openai";
 import { CleanUpPrompt, EnhancePrompt, BookPrompt } from "@/lib/prompts";
 
@@ -11,11 +12,15 @@ const CORS_HEADERS = {
 export function OPTIONS() {
   return NextResponse.json(null, { status: 204, headers: CORS_HEADERS });
 }
-
+interface TransformRequestBody {
+  text?: string;
+  type?: string;
+  coreArgument?: string;
+}
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { text, type } = body ?? {};
+    const body: TransformRequestBody = await req.json();
+    const { text, type, coreArgument } = body ?? {};
 
     if (!text || !type) {
       return NextResponse.json(
@@ -25,16 +30,23 @@ export async function POST(req: NextRequest) {
     }
 
     const userInputText = text ? text : "";
+    let currentCoreArgument = "N/A";
+    if (coreArgument) {
+      currentCoreArgument = coreArgument;
+    }
     let prompt = "";
     switch (type) {
       case "clean":
-        prompt += CleanUpPrompt;
+        const cleanTemplate = Handlebars.compile(CleanUpPrompt);
+        prompt += cleanTemplate({ currentCoreArgument });
         break;
       case "enhance":
-        prompt += EnhancePrompt;
+        const enhanceTemplate = Handlebars.compile(EnhancePrompt);
+        prompt += enhanceTemplate({ currentCoreArgument });
         break;
       case "book":
-        prompt += BookPrompt;
+        const bookTemplate = Handlebars.compile(BookPrompt);
+        prompt += bookTemplate({ currentCoreArgument });
         break;
       default: {
         return NextResponse.json(
