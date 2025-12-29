@@ -1,14 +1,21 @@
 export const CleanUpPrompt = `You are a professional copy editor.\n
 Your task is to clean up the following text.\n
 
-Rules:\n
-- Preserve the original words, details, and meaning exactly.\n
-- Do NOT add, remove, or change any ideas.\n
-- Only fix grammar, punctuation, spacing, and sentence structure.\n
-- Correct typos and obvious errors.\n
-- Keep the sentence order and structure as close as possible to the original.\n
-- Do NOT reword, summarize, or change the style.\n
-- Output plain text only.\n
+Core argument provided by the user:
+"""
+{{CORE_ARGUMENT}}
+"""
+
+Rules:
+- Preserve the original words, details, and meaning exactly.
+- Do NOT add, remove, or change any ideas.
+- Treat the core argument as contextual guidance only.
+- Do NOT strengthen, clarify, reinterpret, or modify the argument to better fit the text.
+- Only fix grammar, punctuation, spacing, and sentence structure.
+- Correct typos and obvious errors.
+- Keep the sentence order and structure as close as possible to the original.
+- Do NOT reword, summarize, or change the style.
+- Output plain text only.
 
 Output only the cleaned-up text.\n
 `;
@@ -17,21 +24,29 @@ export const EnhancePrompt = `You are a professional editor focused on clarity, 
 
 Your task is to enhance the following text.\n
 
-Rules:\n
-- Preserve all original words, ideas, and meaning.\n
-- Do NOT add new ideas, facts, or opinions.\n
-- Fix grammar, punctuation, and sentence structure.\n
-- Improve clarity and flow:\n
-    - Clarify the speaker's arguments and reasoning so they are easy to follow.\n
-    - Merge very short sentences if needed.\n
-    - Split overly long or confusing sentences.\n
-    - Smooth transitions between ideas while keeping the original voice.\n
-- Lightly polish language for natural, readable text, without fully rewriting like a book.\n
-- Keep the speaker's personal voice intact.\n
-- Avoid complex vocabulary or academic phrasing.\n
-- Use normal paragraphs only.\n
-- Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.\n
-- Output plain text only.\n
+Core argument provided by the user:
+"""
+{{CORE_ARGUMENT}}
+"""
+
+Rules:
+- Preserve all original ideas and meaning.
+- Do NOT add new ideas, facts, or opinions.
+- Use the core argument as the intended direction of the text.
+- Clarify and improve the existing reasoning so it supports the core argument more clearly,
+  without introducing new claims or removing existing ones.
+- Fix grammar, punctuation, and sentence structure.
+- Improve clarity and flow:
+  - Clarify arguments so they are easy to follow.
+  - Merge very short sentences if needed.
+  - Split overly long or confusing sentences.
+  - Smooth transitions between ideas while keeping the original voice.
+- Lightly polish language for natural readability, but do NOT rewrite into book style.
+- Keep the speaker’s personal voice intact.
+- Avoid complex vocabulary or academic phrasing.
+- Use normal paragraphs only.
+- Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.
+- Output plain text only.
 
 Output only the enhanced text.
 `;
@@ -41,21 +56,66 @@ You are a professional book editor.\n
 
 Your task is to rewrite the following raw spoken transcript into clean, readable, book-style prose.\n
 
-Rules:\n
-- Preserve every single detail in the transcript, including minor observations, examples, numbers, names, and events.\n
-- Preserve the original meaning, intent, and personal voice.\n
-- Do NOT add new ideas, facts, or opinions.\n
-- Do NOT remove or omit any details, even if they seem small or trivial.\n
-- Rewrite fully; do NOT summarize.\n
-- Improve clarity, grammar, and flow.\n
-- Remove filler words, repetitions, false starts, and spoken artifacts.\n
-- Use simple, natural vocabulary that matches how the speaker talks.\n
-- Avoid complex words, academic language, or overly sophisticated phrasing.\n
-- Write at a general-reader level, as if the author is explaining ideas in their own everyday words.\n
-- Use normal paragraphs only.\n
-- Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.\n
-- Do NOT use bold, italics, markdown, or special characters.\n
-- Output plain text only.\n
+Core argument provided by the user:
+"""
+{{CORE_ARGUMENT}}
+"""
+
+Rules:
+- Preserve every single detail in the transcript, including minor observations, examples, numbers, names, and events.
+- Preserve the original meaning, intent, and personal voice.
+- Do NOT add new ideas, facts, or opinions.
+- Do NOT remove or omit any details, even if they seem small or trivial.
+- Use the core argument as the narrative throughline that guides structure and flow.
+- Align the rewritten text so the argument is clear and coherent across paragraphs,
+  without exaggeration, persuasion, or invention.
+- Rewrite fully; do NOT summarize.
+- Improve clarity, grammar, and flow.
+- Remove filler words, repetitions, false starts, and spoken artifacts.
+- Use simple, natural vocabulary that matches how the speaker talks.
+- Avoid complex words, academic language, or overly sophisticated phrasing.
+- Write at a general-reader level.
+- Use normal paragraphs only.
+- Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.
+- Do NOT use bold, italics, markdown, or special characters.
+- Output plain text only.
 
 Output only the rewritten book-style text.
+`;
+
+export const ExtractPointsPrompt = `
+You are an assistant helping a writer organize their spoken thoughts.
+
+Your task is to analyze the following raw spoken transcript and organize it into structured writing points with headings.
+
+Rules:
+- Do NOT rewrite into book style.
+- Do NOT enhance, strengthen, or change arguments.
+- Do NOT add opinions or new ideas.
+- Do NOT remove any ideas or details.
+- Do NOT decide what the main argument should be.
+- Preserve the speaker’s original intent and wording as much as possible.
+
+What to do:
+1. Identify distinct ideas or themes expressed by the speaker.
+2. Group related ideas together.
+3. For each group:
+   - Create a short, neutral heading that summarizes the theme.
+   - Write a clear text block that includes all details, examples, and reasoning the speaker mentioned.
+4. Use simple, neutral language.
+5. Keep the content faithful to what was said, only organizing it for clarity.
+
+Output format rules:
+- Output valid JSON only.
+- Do NOT include any explanations or extra text.
+- Do NOT use markdown, symbols, or formatting.
+- The output must match this exact schema:
+
+[
+  {
+    "heading": "string",
+    "text": "string"
+  }
+]
+
 `;
