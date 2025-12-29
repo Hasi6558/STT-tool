@@ -574,27 +574,16 @@ export default function TextEditor({
                 </div>
                 <span className="text-white mb-4">{status}</span>
               </div>
-              {isMicSectionOpen && (
-                <div className="absolute top-0 right-4 flex items-start pt-2 sm:pt-4 hidden lg:flex ">
-                  <Button
-                    className="h-8 w-8 sm:h-8 sm:w-8 bg-zinc-100 hover:bg-zinc-300 shadow-md text-zinc-300 opacity-50 hover:opacity-100 transition-all"
-                    onClick={() => setIsMicSectionOpen(!isMicSectionOpen)}
-                    title={"Close sidebar"}
-                  >
-                    <ArrowButton direction="left" />
-                  </Button>
-                </div>
-              )}
             </div>
           </CardHeader>
-          <CardContent className="relative flex flex-col items-center justify-center transition-all duration-300 flex-1 overflow-hidden p-0">
+          <CardContent className="relative flex flex-col !px-6 !py-1 items-center justify-center transition-all duration-300 flex-1 overflow-hidden p-0">
             <Textarea
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
               }
               ref={textareaRef}
               className={
-                "h-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black !focus:outline-none !focus:ring-0 !focus:border-transparent whitespace-pre-wrap overflow-auto border-none w-full rounded-none resize-none"
+                "h-full px-2 sm:px-4 text-base sm:text-lg md:text-lg lg:text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto w-full resize-none border border-gray-200 rounded-md focus:outline-2 focus:outline-[#30c2a1] focus:ring-0"
               }
               style={{
                 scrollbarWidth: "thin",

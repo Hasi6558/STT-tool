@@ -1,7 +1,7 @@
 import { ArrowUpFromLine, List, Mic, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronLeft,
@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ArrowButton from "./ArrowButton";
 import { Spinner } from "./ui/spinner";
+import { pointsRef } from "@/lib/persistentRefs";
 
 interface Point {
   heading: string;
@@ -27,7 +28,8 @@ const PointSeparator = ({
   setIsPointSeparatorOpen,
   accumulatedTranscript,
 }: PointSeparatorProps) => {
-  const [points, setPoints] = useState<Point[]>([]);
+  // lazy-init from shared ref so data survives unmount
+  const [points, setPoints] = useState<Point[]>(() => pointsRef.current ?? []);
   const [loading, setLoading] = useState<boolean>(false);
 
   async function handleExtractPoint(): Promise<void> {
@@ -46,7 +48,9 @@ const PointSeparator = ({
 
       const data: { result: string } = await response.json();
       const resultText = data.result;
-      setPoints(JSON.parse(resultText));
+      const parsed = JSON.parse(resultText);
+      setPoints(parsed);
+      pointsRef.current = parsed;
       setLoading(false);
     } catch (error) {
       setLoading(false);
@@ -104,17 +108,6 @@ const PointSeparator = ({
                 </div>
               </Button>
             </div>
-            {isPointSeparatorOpen && (
-              <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 flex justify-center items-start pt-2 sm:pt-4 hidden lg:flex">
-                <Button
-                  className="h-8 w-8 sm:h-8 sm:w-8 bg-zinc-100 hover:bg-zinc-300 shadow-md text-zinc-300 opacity-100 hover:opacity-100 transition-all"
-                  onClick={() => setIsPointSeparatorOpen(!isPointSeparatorOpen)}
-                  title={"Close sidebar"}
-                >
-                  <ArrowButton direction="up" />
-                </Button>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar">
             {loading ? (

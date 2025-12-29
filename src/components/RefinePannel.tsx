@@ -1,11 +1,21 @@
-import { ArrowLeftFromLine, Mic, Send, Sparkles } from "lucide-react";
+import {
+  ArrowLeftFromLine,
+  ArrowUpNarrowWide,
+  BookOpen,
+  BookOpenText,
+  BrushCleaning,
+  Mic,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { ChangeEvent, JSX, useCallback, useState } from "react";
+import { JSX, useCallback, useState, useEffect } from "react";
+import {
+  refineFinalTextRef,
+  refineCoreArgumentRef,
+} from "@/lib/persistentRefs";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faChevronUp } from "@fortawesome/free-solid-svg-icons";
-import ArrowButton from "./ArrowButton";
 import { Spinner } from "./ui/spinner";
 
 interface RefinePannelProps {
@@ -20,12 +30,17 @@ const RefinePannel = ({
   setIsRefinePannelOpen,
 }: RefinePannelProps): JSX.Element => {
   const [selectedBtn, setSelectedBtn] = useState<string>("clean");
-  const [coreArgument, setCoreArgument] = useState<string>("");
-  const [finalText, setFinalText] = useState<string>("");
+  const [coreArgument, setCoreArgument] = useState<string>(
+    () => refineCoreArgumentRef.current ?? ""
+  );
+  const [finalText, setFinalText] = useState<string>(
+    () => refineFinalTextRef.current ?? ""
+  );
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleTextChange = useCallback((text: string): void => {
     setCoreArgument(text);
+    refineCoreArgumentRef.current = text;
   }, []);
   const handleFinalText = useCallback(async (): Promise<void> => {
     try {
@@ -47,6 +62,7 @@ const RefinePannel = ({
       const data: { result: string } = await response.json();
       const resultText = data.result;
       setFinalText(resultText);
+      refineFinalTextRef.current = resultText;
       console.log("Final Text:", resultText);
     } catch (error) {
       console.error("Error generating final text:", error);
@@ -68,17 +84,13 @@ const RefinePannel = ({
             }
           }}
         >
-          <CardHeader className="relative border-b-1 pb-2">
+          <CardHeader className="relative border-b-1 ">
             <div>
               <div className="flex items-center gap-2 mb-3 ">
                 <Sparkles className="text-[#30c2a1]" size={20} />
                 <h2 className="font-bold">Refine Argument</h2>
               </div>
-              <div className="mb-2">
-                <p className="text-[15px] text-gray-500">
-                  {"What's the core argument you want to make?"}
-                </p>
-              </div>
+
               <div>
                 <Textarea
                   placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
@@ -86,7 +98,7 @@ const RefinePannel = ({
                   onChange={(e) => handleTextChange(e.target.value)}
                 />
               </div>
-              <div className="flex gap-1 my-2">
+              <div className="flex items-center gap-1 mt-2 py-1">
                 <div
                   className={`flex justify-center items-center p-0.5 border-[3px] rounded-2xl transition-all ${
                     selectedBtn === "clean"
@@ -98,9 +110,10 @@ const RefinePannel = ({
                     onClick={() => {
                       setSelectedBtn("clean");
                     }}
-                    disabled={!accumulatedTranscript}
+                    disabled={!accumulatedTranscript || loading}
                     className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
                   >
+                    <BrushCleaning />
                     Clean Up
                   </Button>
                 </div>
@@ -115,9 +128,10 @@ const RefinePannel = ({
                     onClick={() => {
                       setSelectedBtn("enhance");
                     }}
-                    disabled={!accumulatedTranscript}
+                    disabled={!accumulatedTranscript || loading}
                     className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
                   >
+                    <ArrowUpNarrowWide />
                     Enhance
                   </Button>
                 </div>
@@ -132,40 +146,31 @@ const RefinePannel = ({
                     onClick={() => {
                       setSelectedBtn("book");
                     }}
-                    disabled={!accumulatedTranscript}
+                    disabled={!accumulatedTranscript || loading}
                     className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
                   >
+                    <BookOpenText />
                     Book Style
                   </Button>
                 </div>
-              </div>
-              <div>
-                <Button
-                  className="mt-0 w-full bg-[#30c2a1] hover:bg-[#28a88c] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-11 px-3 sm:px-4 md:px-6 rounded-[12px] font-medium"
-                  onClick={() => {
-                    handleFinalText();
-                  }}
-                >
-                  {loading ? <Spinner /> : <Send />}
-                  Generate Final Text
-                </Button>
+                <div>
+                  <Button
+                    className="mt-0 w-full bg-[#30c2a1] hover:bg-[#28a88c] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-11 px-3 sm:px-4 md:px-6 rounded-[12px] font-medium"
+                    onClick={() => {
+                      handleFinalText();
+                    }}
+                    disabled={loading || !accumulatedTranscript}
+                  >
+                    {loading ? <Spinner /> : <Send />}
+                    Generate Final Text
+                  </Button>
+                </div>
               </div>
             </div>
-            {isRefinePannelOpen && (
-              <div className="absolute top-[-25px] right-0 transform -translate-x-1/2 flex justify-center items-start pt-2 sm:pt-4 hidden lg:flex">
-                <Button
-                  className="h-8 w-8 sm:h-8 sm:w-8 bg-zinc-100 hover:bg-zinc-300 shadow-md text-zinc-300 opacity-100 hover:opacity-100 transition-all"
-                  onClick={() => setIsRefinePannelOpen(!isRefinePannelOpen)}
-                  title={"Close sidebar"}
-                >
-                  <ArrowButton direction="right" />
-                </Button>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 border-gray-300">
             <Card
-              className="w-full pt-0 pb-8 border-none shadow-none overflow-auto"
+              className="w-full pt-0 pb-8 px-1  shadow-none overflow-auto !rounded-none border-none"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "rgb(156 163 175) transparent",

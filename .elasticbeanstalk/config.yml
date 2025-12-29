@@ -1,6 +1,6 @@
 branch-defaults:
   main:
-    environment: stt-demo3
+    environment: stt-demo4
     group_suffix: null
 environment-defaults:
   stt-demo:
@@ -10,7 +10,7 @@ global:
   application_name: stt-tool
   branch: null
   default_ec2_keyname: null
-  default_platform: Docker
+  default_platform: Node.js 24
   default_region: ap-southeast-1
   include_git_submodules: true
   instance_profile: null
