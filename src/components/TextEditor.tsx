@@ -576,7 +576,13 @@ export default function TextEditor({
               </div>
             </div>
             <div className="absolute left-4 top-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-600 text-md font-semibold uppercase tracking-wide">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-md font-semibold uppercase tracking-wide ${
+                  isMicOn && isMicConnected
+                    ? "bg-green-100 text-green-600"
+                    : "bg-red-100 text-red-600"
+                }`}
+              >
                 <Mic className="h-4 w-4" />
                 Stage 1
               </span>

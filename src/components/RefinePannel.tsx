@@ -73,6 +73,31 @@ const RefinePannel = ({
 
   return (
     <div className="h-full">
+      <style>{`
+      /* WebKit-based browsers */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgb(156 163 175);
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* Firefox */
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(156 163 175) transparent;
+      }
+
+      /* Keep textarea-targeted rules for compatibility */
+      textarea::-webkit-scrollbar { width: 6px; }
+      textarea::-webkit-scrollbar-thumb { background-color: rgb(156 163 175); border-radius: 3px; }
+      textarea::-webkit-scrollbar-track { background: transparent; }
+    `}</style>
       {isRefinePannelOpen ? (
         <Card
           className={`h-full gap-0 ${
@@ -97,16 +122,16 @@ const RefinePannel = ({
                 </span>
               </div>
 
-              <div className="flex justify-start items-center">
-                <div>
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
                   <Textarea
+                    className="resize-none h-15 w-full"
                     placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
-                    className="resize-none h-15"
                     onChange={(e) => handleTextChange(e.target.value)}
                   />
                 </div>
 
-                <div className="flex flex-col items-center w-[300px] gap-1  py-1">
+                <div className="flex flex-col items-start w-[160px] gap-1 ml-3 mr-2 py-1">
                   <div className="flex flex-row gap-1">
                     <Button
                       onClick={() => setSelectedBtn("clean")}
@@ -130,9 +155,6 @@ const RefinePannel = ({
                     >
                       <BookOpenText className="mr-1" />
                     </Button>
-                  </div>
-
-                  <div className="flex gap-1">
                     <Button
                       onClick={() => setSelectedBtn("enhance")}
                       disabled={!accumulatedTranscript || loading}
@@ -144,29 +166,26 @@ const RefinePannel = ({
                     >
                       <ArrowUpNarrowWide className="mr-1" />
                     </Button>
+                  </div>
+
+                  <div className="flex gap-1 w-full">
                     <Button
-                      className="mt-0 w-[50px] bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9 px-3 sm:px-4 md:px-6 rounded-[12px] font-medium"
+                      className="mt-0 w-[160px] bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9  sm:px-4 md:px-6 rounded-[12px] font-medium"
                       onClick={() => {
                         handleFinalText();
                       }}
                       disabled={loading || !accumulatedTranscript}
                     >
                       {loading ? <Spinner /> : <Send />}
+                      Generate
                     </Button>
                   </div>
                 </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 border-gray-300">
-            <Card
-              className="w-full h-full p-4  shadow-none rounded-lg overflow-auto border-2"
-              style={{
-                scrollbarWidth: "thin",
-                scrollbarColor: "rgb(156 163 175) transparent",
-                maxHeight: "100%",
-              }}
-            >
+          <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar border-gray-300">
+            <Card className="w-full p-4 shadow-none rounded-lg border-2">
               <div className="whitespace-pre-wrap">{finalText}</div>
             </Card>
           </CardContent>
