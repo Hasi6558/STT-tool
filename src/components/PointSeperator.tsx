@@ -116,7 +116,7 @@ const PointSeparator = ({
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar">
-            <Card className="p-4">
+            <Card className="min-h-full p-4">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Spinner />

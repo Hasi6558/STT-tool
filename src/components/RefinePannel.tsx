@@ -185,8 +185,14 @@ const RefinePannel = ({
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar border-gray-300">
-            <Card className="w-full p-4 shadow-none rounded-lg border-2">
-              <div className="whitespace-pre-wrap">{finalText}</div>
+            <Card className="w-full min-h-full p-4 shadow-none rounded-lg border-2">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spinner />
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap">{finalText}</div>
+              )}
             </Card>
           </CardContent>
         </Card>
