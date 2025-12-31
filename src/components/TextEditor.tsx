@@ -575,15 +575,21 @@ export default function TextEditor({
                 <span className="text-white mb-4">{status}</span>
               </div>
             </div>
+            <div className="absolute left-4 top-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-600 text-md font-semibold uppercase tracking-wide">
+                <Mic className="h-4 w-4" />
+                Stage 1
+              </span>
+            </div>
           </CardHeader>
-          <CardContent className="relative flex flex-col !px-6 !py-1 items-center justify-center transition-all duration-300 flex-1 overflow-hidden p-0">
+          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1 overflow-hidden">
             <Textarea
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
               }
               ref={textareaRef}
               className={
-                "h-full px-2 sm:px-4 text-base sm:text-lg md:text-lg lg:text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto w-full resize-none border border-gray-200 rounded-md focus:outline-2 focus:outline-[#30c2a1] focus:ring-0"
+                "h-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto border border-gray-300 w-full rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-[#30c2a1] focus:border-[#30c2a1]"
               }
               style={{
                 scrollbarWidth: "thin",

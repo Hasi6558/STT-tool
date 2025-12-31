@@ -75,7 +75,7 @@ const RefinePannel = ({
     <div className="h-full">
       {isRefinePannelOpen ? (
         <Card
-          className={`h-full ${
+          className={`h-full gap-0 ${
             !isRefinePannelOpen ? "hover:bg-gray-100 " : ""
           }`}
           onClick={() => {
@@ -86,91 +86,81 @@ const RefinePannel = ({
         >
           <CardHeader className="relative border-b-1 ">
             <div>
-              <div className="flex items-center gap-2 mb-3 ">
-                <Sparkles className="text-[#30c2a1]" size={20} />
-                <h2 className="font-bold">Refine Argument</h2>
+              <div className="flex justify-start items-center mb-0 gap-2">
+                <div className="flex items-center gap-2 text-2xl   ">
+                  <Sparkles className="text-[#30c2a1]" size={20} />
+                  <h2 className="font-bold  mr-2">Refine Argument</h2>
+                </div>
+
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-md font-semibold uppercase tracking-wide">
+                  Stage 3
+                </span>
               </div>
 
-              <div>
-                <Textarea
-                  placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
-                  className="resize-none h-15"
-                  onChange={(e) => handleTextChange(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-1 mt-2 py-1">
-                <div
-                  className={`flex justify-center items-center p-0.5 border-[3px] rounded-2xl transition-all ${
-                    selectedBtn === "clean"
-                      ? "border-[#30c2a1]"
-                      : "border-transparent"
-                  } ${!accumulatedTranscript ? "opacity-50" : ""}`}
-                >
-                  <Button
-                    onClick={() => {
-                      setSelectedBtn("clean");
-                    }}
-                    disabled={!accumulatedTranscript || loading}
-                    className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
-                  >
-                    <BrushCleaning />
-                    Clean Up
-                  </Button>
-                </div>
-                <div
-                  className={`flex justify-center items-center p-0.5 border-[3px] rounded-2xl transition-all ${
-                    selectedBtn === "enhance"
-                      ? "border-[#30c2a1]"
-                      : "border-transparent"
-                  } ${!accumulatedTranscript ? "opacity-50" : ""}`}
-                >
-                  <Button
-                    onClick={() => {
-                      setSelectedBtn("enhance");
-                    }}
-                    disabled={!accumulatedTranscript || loading}
-                    className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
-                  >
-                    <ArrowUpNarrowWide />
-                    Enhance
-                  </Button>
-                </div>
-                <div
-                  className={`flex justify-center items-center p-0.5 border-[3px] rounded-2xl transition-all ${
-                    selectedBtn === "book"
-                      ? "border-[#30c2a1]"
-                      : "border-transparent"
-                  } ${!accumulatedTranscript ? "opacity-50" : ""}`}
-                >
-                  <Button
-                    onClick={() => {
-                      setSelectedBtn("book");
-                    }}
-                    disabled={!accumulatedTranscript || loading}
-                    className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-[16px] h-9 sm:h-10 md:h-10 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6 rounded-[12px]"
-                  >
-                    <BookOpenText />
-                    Book Style
-                  </Button>
-                </div>
+              <div className="flex justify-start items-center">
                 <div>
-                  <Button
-                    className="mt-0 w-full bg-[#30c2a1] hover:bg-[#28a88c] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-11 px-3 sm:px-4 md:px-6 rounded-[12px] font-medium"
-                    onClick={() => {
-                      handleFinalText();
-                    }}
-                    disabled={loading || !accumulatedTranscript}
-                  >
-                    {loading ? <Spinner /> : <Send />}
-                    Generate Final Text
-                  </Button>
+                  <Textarea
+                    placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
+                    className="resize-none h-15"
+                    onChange={(e) => handleTextChange(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex flex-col items-center w-[300px] gap-1  py-1">
+                  <div className="flex flex-row gap-1">
+                    <Button
+                      onClick={() => setSelectedBtn("clean")}
+                      disabled={!accumulatedTranscript || loading}
+                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
+                        selectedBtn === "clean"
+                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
+                      }`}
+                    >
+                      <BrushCleaning className="mr-1" />
+                    </Button>
+                    <Button
+                      onClick={() => setSelectedBtn("book")}
+                      disabled={!accumulatedTranscript || loading}
+                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
+                        selectedBtn === "book"
+                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
+                      }`}
+                    >
+                      <BookOpenText className="mr-1" />
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={() => setSelectedBtn("enhance")}
+                      disabled={!accumulatedTranscript || loading}
+                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
+                        selectedBtn === "enhance"
+                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
+                      }`}
+                    >
+                      <ArrowUpNarrowWide className="mr-1" />
+                    </Button>
+                    <Button
+                      className="mt-0 w-[50px] bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9 px-3 sm:px-4 md:px-6 rounded-[12px] font-medium"
+                      onClick={() => {
+                        handleFinalText();
+                      }}
+                      disabled={loading || !accumulatedTranscript}
+                    >
+                      {loading ? <Spinner /> : <Send />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 border-gray-300">
             <Card
-              className="w-full pt-0 pb-8 px-1  shadow-none overflow-auto !rounded-none border-none"
+              className="w-full h-full p-4  shadow-none rounded-lg overflow-auto border-2"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "rgb(156 163 175) transparent",

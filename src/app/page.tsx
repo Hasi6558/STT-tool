@@ -58,61 +58,46 @@ export default function Home() {
   const isFullPoints = currentView === "full-points";
   const isFullRefine = currentView === "full-refine";
   const isFullMic = currentView === "full-mic";
-  const getViewLabel = () => {
-    switch (currentView) {
-      case "mic-points":
-        return "Recording + Points";
-      case "full-points":
-        return "Key Points";
-      case "full-mic":
-        return "Recording";
-      case "points-refine":
-        return "Points + Refine";
-      case "full-refine":
-        return "Refine Argument";
-    }
-  };
+
   return (
     <>
       <Navbar onPDFDownload={handleDownloadPDF} />
-      <div className="flex items-center justify-center gap-4 py-3 px-4 border-b border-border bg-card/50">
-        <button
-          onClick={handleNavigateLeft}
-          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Navigate left"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+      <div className="flex items-center justify-center gap-4 py-0 px-4 border-b border-border bg-card/50">
+        <div className="flex items-center justify-center gap-6 border-b py-1 border-border bg-card/50">
+          <button
+            onClick={handleNavigateLeft}
+            className="p-3 rounded-xl hover:bg-secondary text-foreground hover:text-primary transition-all duration-200 hover:scale-110 active:scale-95"
+            aria-label="Navigate left"
+          >
+            <ChevronLeft className="h-10 w-10 stroke-[3] hover:text-[#30c2a1] transition-all duration-200" />
+          </button>
 
-        <div className="flex items-center gap-2">
-          {viewStates.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentViewIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all  ${
-                index === currentViewIndex
-                  ? "bg-[#30c2a1] w-6"
-                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-              }`}
-              aria-label={`Go to view ${index + 1}`}
-            />
-          ))}
+          <div className="flex items-center gap-3">
+            {viewStates.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentViewIndex(index)}
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  index === currentViewIndex
+                    ? "bg-[#30c2a1] w-8"
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50 w-2.5"
+                }`}
+                aria-label={`Go to view ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={handleNavigateRight}
+            className="p-3 rounded-xl hover:bg-secondary text-foreground hover:text-primary transition-all duration-200 hover:scale-110 active:scale-95"
+            aria-label="Navigate right"
+          >
+            <ChevronRight className="h-10 w-10 stroke-[3] hover:text-[#30c2a1] transition-all duration-200" />
+          </button>
         </div>
-
-        <span className="text-sm text-muted-foreground min-w-[140px] text-center">
-          {getViewLabel()}
-        </span>
-
-        <button
-          onClick={handleNavigateRight}
-          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Navigate right"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
       </div>
       <div className="flex  bg-zinc-50 font-sans">
-        <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-2 sm:my-4">
+        <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-0">
           {/* Mobile Toggle Button */}
           <div className="lg:hidden flex justify-center gap-2 mb-2">
             <button
@@ -138,27 +123,26 @@ export default function Home() {
           </div>
 
           {/* TextEditor - Hidden on mobile when showing modification bar */}
-          {showMic && (
-            <div
-              className={`transition-all duration-300 h-full ${
-                // when in full-mic view, allow the editor to take full available space
-                isFullMic
-                  ? "flex-1"
-                  : isMicSectionOpen
-                  ? "flex-1"
-                  : "w-[46px] flex-none"
-              } ${showModificationOnMobile ? "hidden lg:block" : "block"}`}
-            >
+          <div
+            className={`transition-all duration-500 ease-out transform h-full ${
+              showMic
+                ? isMicSectionOpen
+                  ? "flex-1 opacity-100 translate-x-0"
+                  : "w-[46px] flex-none opacity-100 translate-x-0"
+                : "w-0 opacity-0 -translate-x-full overflow-hidden"
+            } ${showModificationOnMobile ? "hidden lg:block" : "block"}`}
+          >
+            {showMic && (
               <TextEditor
                 isMicSectionOpen={isMicSectionOpen}
                 setIsMicSectionOpen={setIsMicSectionOpen}
                 accumulatedTranscript={accumulatedTranscript}
                 setAccumulatedTranscript={setAccumulatedTranscript}
               />
-            </div>
-          )}
+            )}
+          </div>
           {showMic && showPoints && (
-            <div className="flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center justify-center flex-shrink-0 transition-opacity duration-300">
               <svg
                 width="24"
                 height="16"
@@ -176,22 +160,26 @@ export default function Home() {
               </svg>
             </div>
           )}
-          {showPoints && (
-            <div
-              className={`transition-all duration-300 h-full ${
-                isPointSeparatorOpen ? "flex-1" : "w-[46px] flex-none"
-              }`}
-            >
-              {/* point separator */}
+          <div
+            className={`transition-all duration-500 ease-out transform h-full ${
+              showPoints
+                ? isPointSeparatorOpen
+                  ? "flex-1 opacity-100 translate-x-0"
+                  : "w-[46px] flex-none opacity-100 translate-x-0"
+                : "w-0 opacity-0 translate-x-full overflow-hidden"
+            }`}
+          >
+            {showPoints && (
               <PointSeparator
                 isPointSeparatorOpen={isPointSeparatorOpen}
                 setIsPointSeparatorOpen={setIsPointSeparatorOpen}
                 accumulatedTranscript={accumulatedTranscript}
               />
-            </div>
-          )}
+            )}
+          </div>
+
           {showPoints && showRefine && !isFullRefine && (
-            <div className="flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center justify-center flex-shrink-0 transition-opacity duration-300">
               <svg
                 width="24"
                 height="16"
@@ -209,25 +197,27 @@ export default function Home() {
               </svg>
             </div>
           )}
-
           {/* Modificationbar - Shows based on mobile toggle or desktop open state */}
-          {showRefine && (
-            <div
-              className={`transition-all duration-300 overflow-hidden h-full ${
-                showModificationOnMobile ? "block lg:hidden" : "hidden"
-              } lg:block ${
-                isRefinePannelOpen ? "lg:flex-1" : "lg:w-[46px] lg:flex-none"
-              }`}
-            >
-              {(showModificationOnMobile || isModificationBarOpen) && (
+          <div
+            className={`transition-all duration-500 ease-out transform overflow-hidden h-full ${
+              showRefine
+                ? isRefinePannelOpen
+                  ? "flex-1 opacity-100 translate-x-0"
+                  : "w-[46px] flex-none opacity-100 translate-x-0"
+                : "w-0 opacity-0 translate-x-full overflow-hidden"
+            } ${
+              showModificationOnMobile ? "block lg:hidden" : "hidden"
+            } lg:block`}
+          >
+            {showRefine &&
+              (showModificationOnMobile || isModificationBarOpen) && (
                 <RefinePannel
                   accumulatedTranscript={accumulatedTranscript}
                   isRefinePannelOpen={isRefinePannelOpen}
                   setIsRefinePannelOpen={setIsRefinePannelOpen}
                 />
               )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </>

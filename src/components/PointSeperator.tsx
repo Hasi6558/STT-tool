@@ -87,16 +87,22 @@ const PointSeparator = ({
     `}</style>
       {isPointSeparatorOpen ? (
         <Card
-          className={`relative h-full overflow-hidden flex flex-col ${
+          className={`relative h-full overflow-hidden flex flex-col gap-0 ${
             !isPointSeparatorOpen ? "hover:bg-gray-100 " : ""
           }`}
         >
           <CardHeader className="border-b-1 pb-3 relative flex-shrink-0">
             <div className="w-full flex justify-between w-full">
-              <div className="flex items-center gap-2">
-                <List size={17} color="#30c2a1" />
-                <h2 className="font-bold text-[17px]">Key Points</h2>
+              <div className="flex justify-start items-center gap-2">
+                <div className="flex items-center gap-2 text-2xl">
+                  <List size={20} color="#30c2a1" />
+                  <h2 className="font-bold mr-2">Key Points</h2>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-md font-semibold uppercase tracking-wide">
+                  Stage 2
+                </span>
               </div>
+
               <Button
                 onClick={() => handleExtractPoint()}
                 disabled={loading || !accumulatedTranscript}
@@ -110,24 +116,26 @@ const PointSeparator = ({
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <Spinner />
-              </div>
-            ) : (
-              <div className="h-full">
-                <div className="whitespace-pre-wrap">
-                  {points.map((point, index) => (
-                    <div key={index} className="mb-6">
-                      <h3 className="font-semibold text-lg mb-2">
-                        {point.heading}
-                      </h3>
-                      <p className="whitespace-pre-wrap">{point.text}</p>
-                    </div>
-                  ))}
+            <Card className="h-full p-4">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spinner />
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="h-full">
+                  <div className="whitespace-pre-wrap">
+                    {points.map((point, index) => (
+                      <div key={index} className="mb-6">
+                        <h3 className="font-semibold text-lg mb-2">
+                          {point.heading}
+                        </h3>
+                        <p className="whitespace-pre-wrap">{point.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
           </CardContent>
         </Card>
       ) : (

@@ -1,22 +1,19 @@
 branch-defaults:
   main:
-    environment: stt-demo4
-    group_suffix: null
+    environment: stt-prod
 environment-defaults:
-  stt-demo:
+  stt-demo4:
     branch: null
     repository: null
 global:
   application_name: stt-tool
-  branch: null
   default_ec2_keyname: null
-  default_platform: Node.js 24
+  default_platform: Node.js 24 running on 64bit Amazon Linux 2023
   default_region: ap-southeast-1
   include_git_submodules: true
   instance_profile: null
   platform_name: null
   platform_version: null
   profile: null
-  repository: null
   sc: git
   workspace_type: Application
