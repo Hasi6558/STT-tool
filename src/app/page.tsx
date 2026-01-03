@@ -97,7 +97,7 @@ export default function Home() {
         </div>
       </div>
       <div className="flex  bg-zinc-50 font-sans">
-        <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-0">
+        <div className="flex flex-col lg:flex-row w-full min-h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-0">
           {/* Mobile Toggle Button */}
           <div className="lg:hidden flex justify-center gap-2 mb-2">
             <button

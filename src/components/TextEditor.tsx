@@ -588,14 +588,14 @@ export default function TextEditor({
               </span>
             </div>
           </CardHeader>
-          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1 overflow-hidden">
+          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1">
             <Textarea
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
               }
               ref={textareaRef}
               className={
-                "h-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto border border-gray-300 w-full rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-[#30c2a1] focus:border-[#30c2a1]"
+                "min-h-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto border border-gray-300 w-full rounded-2xl resize-y focus:outline-none focus:ring-2 focus:ring-[#30c2a1] focus:border-[#30c2a1]"
               }
               style={{
                 scrollbarWidth: "thin",
