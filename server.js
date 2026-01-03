@@ -106,150 +106,284 @@ app.prepare().then(() => {
       console.log("Client connected to WebSocket server");
 
       let openaiWs = null;
+      let deepgramWs = null;
+      let currentMode = "classic";
 
       clientWs.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
 
-          // Initialize OpenAI WebSocket connection
+          // Initialize transcription connection based on mode
           if (data.type === "init") {
-            const apiKey = process.env.OPENAI_API_KEY;
+            currentMode = data.mode || "classic";
+            console.log(`Initializing in ${currentMode} mode`);
 
-            if (!apiKey) {
-              clientWs.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "OpenAI API key not configured",
-                })
-              );
-              return;
-            }
+            if (currentMode === "pro") {
+              // Pro mode: Use Deepgram Nova 3 for real-time streaming
+              const deepgramApiKey = process.env.DEEPGEAM_API_KEY;
 
-            // Connect to OpenAI Realtime API with transcription intent
-            const WebSocket = (await import("ws")).default;
-            openaiWs = new WebSocket(
-              "wss://api.openai.com/v1/realtime?intent=transcription",
-              {
+              if (!deepgramApiKey) {
+                clientWs.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "Deepgram API key not configured",
+                  })
+                );
+                return;
+              }
+
+              const WebSocket = (await import("ws")).default;
+
+              // Connect to Deepgram with Nova 3 model
+              const deepgramUrl = new URL("wss://api.deepgram.com/v1/listen");
+              deepgramUrl.searchParams.append("model", "nova-3");
+              deepgramUrl.searchParams.append("language", "en");
+              deepgramUrl.searchParams.append("punctuate", "true");
+              deepgramUrl.searchParams.append("interim_results", "true");
+              deepgramUrl.searchParams.append("encoding", "linear16");
+              deepgramUrl.searchParams.append("sample_rate", "24000");
+              deepgramUrl.searchParams.append("channels", "1");
+              deepgramUrl.searchParams.append("smart_format", "true");
+
+              deepgramWs = new WebSocket(deepgramUrl.toString(), {
                 headers: {
-                  Authorization: `Bearer ${apiKey}`,
-                  "OpenAI-Beta": "realtime=v1",
+                  Authorization: `Token ${deepgramApiKey}`,
                 },
+              });
+
+              deepgramWs.on("open", () => {
+                console.log("Connected to Deepgram Nova 3");
+                clientWs.send(
+                  JSON.stringify({
+                    type: "ready",
+                    message: "Connected to Deepgram (Pro mode)",
+                  })
+                );
+              });
+
+              deepgramWs.on("message", (message) => {
+                try {
+                  const response = JSON.parse(message.toString());
+                  console.log("Deepgram response:", response.type);
+
+                  if (response.type === "Results") {
+                    const transcript =
+                      response.channel?.alternatives?.[0]?.transcript;
+                    const isFinal = response.is_final;
+                    const words =
+                      response.channel?.alternatives?.[0]?.words || [];
+
+                    if (transcript) {
+                      // Send word-by-word for real-time display
+                      if (isFinal && words.length > 0) {
+                        // For final results, send the complete transcript
+                        clientWs.send(
+                          JSON.stringify({
+                            type: "deepgram_transcript",
+                            transcript: transcript,
+                            is_final: true,
+                          })
+                        );
+                      } else if (!isFinal) {
+                        // For interim results, just log (or could show visual feedback)
+                        console.log("Interim:", transcript);
+                      }
+                    }
+                  }
+
+                  if (response.type === "Metadata") {
+                    console.log(
+                      "Deepgram session started:",
+                      response.request_id
+                    );
+                  }
+                } catch (error) {
+                  console.error("Error parsing Deepgram message:", error);
+                }
+              });
+
+              deepgramWs.on("error", (error) => {
+                console.error("Deepgram WebSocket error:", error);
+                clientWs.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "Deepgram connection error",
+                  })
+                );
+              });
+
+              deepgramWs.on("close", () => {
+                console.log("Deepgram WebSocket closed");
+                clientWs.send(
+                  JSON.stringify({
+                    type: "disconnected",
+                    message: "Deepgram disconnected",
+                  })
+                );
+              });
+            } else {
+              // Classic mode: Use OpenAI Realtime API
+              const apiKey = process.env.OPENAI_API_KEY;
+
+              if (!apiKey) {
+                clientWs.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "OpenAI API key not configured",
+                  })
+                );
+                return;
               }
-            );
 
-            let sessionId = null;
-
-            openaiWs.on("open", () => {
-              console.log("Connected to OpenAI Realtime API");
-              // Don't send configuration immediately, wait for session.created
-            });
-
-            openaiWs.on("message", (message) => {
-              try {
-                const response = JSON.parse(message.toString());
-                console.log("Received from OpenAI:", response.type);
-
-                // Capture session ID and configure transcription
-                if (response.type === "transcription_session.created") {
-                  sessionId = response.session.id;
-                  console.log("  Session ID:", sessionId);
-
-                  // Now configure the session with optimized settings
-                  openaiWs.send(
-                    JSON.stringify({
-                      type: "transcription_session.update",
-                      session: {
-                        input_audio_format: "pcm16",
-                        input_audio_transcription: {
-                          model: "gpt-4o-transcribe",
-                          language: "en", // English only for better accuracy
-                        },
-                        turn_detection: {
-                          type: "server_vad",
-                          threshold: 0.6, // Increased threshold for less false positives
-                          prefix_padding_ms: 200, // Reduced padding for faster detection
-                          silence_duration_ms: 400, // Shorter silence for quicker turn detection
-                        },
-                        input_audio_noise_reduction: {
-                          type: "near_field",
-                        },
-                        include: ["item.input_audio_transcription.logprobs"],
-                      },
-                    })
-                  );
-
-                  clientWs.send(
-                    JSON.stringify({
-                      type: "ready",
-                      message: "Connected to transcription service",
-                    })
-                  );
+              // Connect to OpenAI Realtime API with transcription intent
+              const WebSocket = (await import("ws")).default;
+              openaiWs = new WebSocket(
+                "wss://api.openai.com/v1/realtime?intent=transcription",
+                {
+                  headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    "OpenAI-Beta": "realtime=v1",
+                  },
                 }
-
-                // Log errors for debugging
-                if (response.type === "error") {
-                  console.error(
-                    "  OpenAI Error:",
-                    JSON.stringify(response.error, null, 2)
-                  );
-                }
-
-                // Log important ordering information for debugging
-                if (response.type === "input_audio_buffer.committed") {
-                  console.log("  item_id:", response.item_id);
-                  console.log("  previous_item_id:", response.previous_item_id);
-                }
-
-                // Log all conversation item events for debugging
-                if (response.type?.startsWith("conversation.item")) {
-                  console.log(
-                    "  Full event:",
-                    JSON.stringify(response, null, 2)
-                  );
-                }
-
-                // Forward ALL events to client for now to debug
-                clientWs.send(JSON.stringify(response));
-              } catch (error) {
-                console.error("Error parsing OpenAI message:", error);
-              }
-            });
-
-            openaiWs.on("error", (error) => {
-              console.error("OpenAI WebSocket error:", error);
-              clientWs.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "OpenAI connection error",
-                })
               );
-            });
 
-            openaiWs.on("close", () => {
-              console.log("OpenAI WebSocket closed");
-              clientWs.send(
-                JSON.stringify({
-                  type: "disconnected",
-                  message: "Transcription service disconnected",
-                })
-              );
-            });
+              let sessionId = null;
+
+              openaiWs.on("open", () => {
+                console.log("Connected to OpenAI Realtime API");
+                // Don't send configuration immediately, wait for session.created
+              });
+
+              openaiWs.on("message", (message) => {
+                try {
+                  const response = JSON.parse(message.toString());
+                  console.log("Received from OpenAI:", response.type);
+
+                  // Capture session ID and configure transcription
+                  if (response.type === "transcription_session.created") {
+                    sessionId = response.session.id;
+                    console.log("  Session ID:", sessionId);
+
+                    // Now configure the session with optimized settings
+                    openaiWs.send(
+                      JSON.stringify({
+                        type: "transcription_session.update",
+                        session: {
+                          input_audio_format: "pcm16",
+                          input_audio_transcription: {
+                            model: "gpt-4o-transcribe",
+                            language: "en", // English only for better accuracy
+                          },
+                          turn_detection: {
+                            type: "server_vad",
+                            threshold: 0.6, // Increased threshold for less false positives
+                            prefix_padding_ms: 200, // Reduced padding for faster detection
+                            silence_duration_ms: 400, // Shorter silence for quicker turn detection
+                          },
+                          input_audio_noise_reduction: {
+                            type: "near_field",
+                          },
+                          include: ["item.input_audio_transcription.logprobs"],
+                        },
+                      })
+                    );
+
+                    clientWs.send(
+                      JSON.stringify({
+                        type: "ready",
+                        message: "Connected to transcription service",
+                      })
+                    );
+                  }
+
+                  // Log errors for debugging
+                  if (response.type === "error") {
+                    console.error(
+                      "  OpenAI Error:",
+                      JSON.stringify(response.error, null, 2)
+                    );
+                  }
+
+                  // Log important ordering information for debugging
+                  if (response.type === "input_audio_buffer.committed") {
+                    console.log("  item_id:", response.item_id);
+                    console.log(
+                      "  previous_item_id:",
+                      response.previous_item_id
+                    );
+                  }
+
+                  // Log all conversation item events for debugging
+                  if (response.type?.startsWith("conversation.item")) {
+                    console.log(
+                      "  Full event:",
+                      JSON.stringify(response, null, 2)
+                    );
+                  }
+
+                  // Forward ALL events to client for now to debug
+                  clientWs.send(JSON.stringify(response));
+                } catch (error) {
+                  console.error("Error parsing OpenAI message:", error);
+                }
+              });
+
+              openaiWs.on("error", (error) => {
+                console.error("OpenAI WebSocket error:", error);
+                clientWs.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "OpenAI connection error",
+                  })
+                );
+              });
+
+              openaiWs.on("close", () => {
+                console.log("OpenAI WebSocket closed");
+                clientWs.send(
+                  JSON.stringify({
+                    type: "disconnected",
+                    message: "Transcription service disconnected",
+                  })
+                );
+              });
+            }
           }
 
-          // Forward audio data to OpenAI
-          if (data.type === "audio" && openaiWs && openaiWs.readyState === 1) {
-            openaiWs.send(
-              JSON.stringify({
-                type: "input_audio_buffer.append",
-                audio: data.audio,
-              })
-            );
+          // Forward audio data based on mode
+          if (data.type === "audio") {
+            if (
+              currentMode === "pro" &&
+              deepgramWs &&
+              deepgramWs.readyState === 1
+            ) {
+              // Deepgram expects raw audio bytes, not base64
+              const audioBuffer = Buffer.from(data.audio, "base64");
+              deepgramWs.send(audioBuffer);
+            } else if (
+              currentMode === "classic" &&
+              openaiWs &&
+              openaiWs.readyState === 1
+            ) {
+              openaiWs.send(
+                JSON.stringify({
+                  type: "input_audio_buffer.append",
+                  audio: data.audio,
+                })
+              );
+            }
           }
 
           // Handle stop recording
-          if (data.type === "stop" && openaiWs) {
-            openaiWs.close();
-            openaiWs = null;
+          if (data.type === "stop") {
+            if (deepgramWs) {
+              deepgramWs.close();
+              deepgramWs = null;
+            }
+            if (openaiWs) {
+              openaiWs.close();
+              openaiWs = null;
+            }
           }
         } catch (error) {
           console.error("Error handling client message:", error);
@@ -267,6 +401,10 @@ app.prepare().then(() => {
         if (openaiWs) {
           openaiWs.close();
           openaiWs = null;
+        }
+        if (deepgramWs) {
+          deepgramWs.close();
+          deepgramWs = null;
         }
       });
 

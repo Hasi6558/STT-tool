@@ -125,7 +125,7 @@ const RefinePannel = ({
               <div className="flex justify-between items-center">
                 <div className="flex-1">
                   <Textarea
-                    className="resize-none h-15 w-full"
+                    className="resize-none h-15 w-full "
                     placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
                     onChange={(e) => handleTextChange(e.target.value)}
                   />

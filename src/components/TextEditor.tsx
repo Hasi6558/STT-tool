@@ -10,9 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, ArrowRightFromLine, Mic, Text } from "lucide-react";
+import { ArrowRight, ArrowRightFromLine, Mic, Text, Zap } from "lucide-react";
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
+
+type TranscriptionMode = "classic" | "pro";
 
 interface TextEditorProps {
   isMicSectionOpen: boolean;
@@ -31,6 +33,7 @@ export default function TextEditor({
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
+  const [mode, setMode] = useState<TranscriptionMode>("classic");
 
   const cursorRef = useRef<number | null>(null);
 
@@ -216,6 +219,28 @@ export default function TextEditor({
     });
   };
 
+  // Pro mode: Insert text word-by-word without trailing space (for streaming)
+  const insertStreamingText = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = cursorRef.current ?? textarea.value.length;
+    const fullText = textRef.current ?? "";
+
+    const newText = fullText.slice(0, start) + text + fullText.slice(start);
+
+    textRef.current = newText;
+    setAccumulatedTranscript(newText);
+
+    const newPos = start + text.length;
+    cursorRef.current = newPos;
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = newPos;
+    });
+  };
+
   const startRecording = async () => {
     try {
       setStatus("Initializing...");
@@ -274,8 +299,8 @@ export default function TextEditor({
         console.log("WebSocket connected");
         setStatus("Connecting to transcription service...");
 
-        // Initialize transcription session
-        ws.send(JSON.stringify({ type: "init" }));
+        // Initialize transcription session with mode
+        ws.send(JSON.stringify({ type: "init", mode }));
       };
 
       ws.onmessage = (event) => {
@@ -284,9 +309,30 @@ export default function TextEditor({
 
         switch (data.type) {
           case "ready":
-            setStatus("Recording...");
+            setStatus(
+              mode === "pro" ? "Recording (Real-time)..." : "Recording..."
+            );
             break;
 
+          // Pro mode (Deepgram) events
+          case "deepgram_transcript":
+            if (data.transcript && data.is_final) {
+              // Final transcript from Deepgram - insert with space
+              insertTextAtCursor(data.transcript);
+            } else if (data.transcript && !data.is_final) {
+              // Interim results - could show visual feedback but don't insert
+              console.log("Interim:", data.transcript);
+            }
+            break;
+
+          case "deepgram_word":
+            // Real-time word-by-word from Deepgram
+            if (data.word) {
+              insertStreamingText(data.word + " ");
+            }
+            break;
+
+          // Classic mode (OpenAI) events
           case "input_audio_buffer.committed":
             // Speech chunk detected and committed
             // Track the item_id and previous_item_id for ordering
@@ -587,11 +633,45 @@ export default function TextEditor({
                 Stage 1
               </span>
             </div>
+            {/* Mode Toggle */}
+            <div className="absolute right-4 top-4">
+              <div className="flex gap-1 bg-white/20 p-1 rounded-lg backdrop-blur-sm">
+                <Button
+                  onClick={() => setMode("classic")}
+                  disabled={isMicOn}
+                  className={`px-3 py-1 text-xs font-semibold rounded transition-all ${
+                    mode === "classic"
+                      ? "bg-white text-gray-800 shadow-md"
+                      : "bg-transparent text-white hover:bg-white/20"
+                  } ${isMicOn ? "opacity-50 cursor-not-allowed" : ""}`}
+                  variant="ghost"
+                  size="sm"
+                >
+                  Classic
+                </Button>
+                <Button
+                  onClick={() => setMode("pro")}
+                  disabled={isMicOn}
+                  className={`px-3 py-1 text-xs font-semibold rounded transition-all flex items-center gap-1 ${
+                    mode === "pro"
+                      ? "bg-white text-gray-800 shadow-md"
+                      : "bg-transparent text-white hover:bg-white/20"
+                  } ${isMicOn ? "opacity-50 cursor-not-allowed" : ""}`}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Zap className="h-3 w-3" />
+                  Pro
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1">
             <Textarea
               placeholder={
-                "No transcript yet. Click the microphone to start recording."
+                mode === "classic"
+                  ? "No transcript yet. Click the microphone to start recording. (Sentence mode)"
+                  : "No transcript yet. Click the microphone to start recording. (Real-time streaming)"
               }
               ref={textareaRef}
               className={
