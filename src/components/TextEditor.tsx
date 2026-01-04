@@ -638,7 +638,6 @@ export default function TextEditor({
                     : "bg-red-100 text-red-600"
                 }`}
               >
-                <Mic className="h-4 w-4" />
                 Stage 1
               </span>
             </div>
@@ -684,7 +683,7 @@ export default function TextEditor({
               }
               ref={textareaRef}
               className={
-                "min-h-[400px] w-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#30c2a1] resize-y focus:border-[#30c2a1] overflow-y-auto !field-sizing-normal"
+                "h-[400px] w-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#30c2a1] resize-y focus:border-[#30c2a1] overflow-y-auto !field-sizing-normal"
               }
               style={{
                 scrollbarWidth: "thin",

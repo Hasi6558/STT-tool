@@ -147,22 +147,6 @@ const RefinePannel = ({
                       <span>Clean</span>
                     </button>
                     <button
-                      onClick={() => setSelectedBtn("book")}
-                      disabled={!accumulatedTranscript || loading}
-                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium border-x-2 border-[#30c2a1] transition-all ${
-                        selectedBtn === "book"
-                          ? "bg-[#30c2a1] text-white"
-                          : "bg-transparent text-gray-700 hover:bg-gray-300"
-                      } ${
-                        !accumulatedTranscript || loading
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      <BookOpenText size={14} />
-                      <span>Book</span>
-                    </button>
-                    <button
                       onClick={() => setSelectedBtn("enhance")}
                       disabled={!accumulatedTranscript || loading}
                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
@@ -177,6 +161,22 @@ const RefinePannel = ({
                     >
                       <ArrowUpNarrowWide size={14} />
                       <span>Enhance</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedBtn("book")}
+                      disabled={!accumulatedTranscript || loading}
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium border-x-2 border-[#30c2a1] transition-all ${
+                        selectedBtn === "book"
+                          ? "bg-[#30c2a1] text-white"
+                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                      } ${
+                        !accumulatedTranscript || loading
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <BookOpenText size={14} />
+                      <span>Book</span>
                     </button>
                   </div>
 

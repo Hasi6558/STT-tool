@@ -6,15 +6,28 @@ Core argument provided by the user:
 {{CORE_ARGUMENT}}
 """
 
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
+
 Rules:
 - Preserve the original words, details, and meaning exactly.
 - Do NOT add, remove, or change any ideas.
 - Treat the core argument as contextual guidance only.
-- Do NOT strengthen, clarify, reinterpret, or modify the argument to better fit the text.
+- Do NOT strengthen, clarify, reinterpret, ors modify the argument to better fit the text.
 - Only fix grammar, punctuation, spacing, and sentence structure.
 - Correct typos and obvious errors.
 - Keep the sentence order and structure as close as possible to the original.
 - Do NOT reword, summarize, or change the style.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the cleaned-up text.\n
@@ -28,6 +41,15 @@ Core argument provided by the user:
 """
 {{CORE_ARGUMENT}}
 """
+
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
 
 Rules:
 - Preserve all original ideas and meaning.
@@ -46,6 +68,10 @@ Rules:
 - Avoid complex vocabulary or academic phrasing.
 - Use normal paragraphs only.
 - Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the enhanced text.
@@ -60,6 +86,15 @@ Core argument provided by the user:
 """
 {{CORE_ARGUMENT}}
 """
+
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
 
 Rules:
 - Preserve every single detail in the transcript, including minor observations, examples, numbers, names, and events.
@@ -78,6 +113,10 @@ Rules:
 - Use normal paragraphs only.
 - Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.
 - Do NOT use bold, italics, markdown, or special characters.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the rewritten book-style text.
