@@ -86,30 +86,37 @@ Output only the rewritten book-style text.
 export const ExtractPointsPrompt = `
 You are an assistant helping a writer organize their spoken thoughts.
 
-Your task is to analyze the following raw spoken transcript and organize it into structured writing points with headings.
+Your task is to lightly clean and organize the following raw spoken transcript into structured writing points with headings.
 
-Rules:
+Rules (VERY IMPORTANT):
 - Do NOT rewrite into book style.
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
 - Do NOT remove any ideas or details.
-- Do NOT change the original words or the order of words in the transcript.
-- Do NOT decide what the main argument should be.
+- Do NOT change the meaning of any sentence.
+- Do NOT change the order of ideas or sentences.
+- Do NOT paraphrase or replace words with alternatives.
 - Preserve the speaker’s original intent and wording exactly.
 
+Allowed cleanup (ONLY these are allowed):
+- Fix punctuation (periods, commas, question marks).
+- Fix spacing and line breaks.
+- Fix obvious transcription errors (e.g., repeated words caused by speech-to-text).
+- Split run-on text into sentences ONLY where clearly needed.
+- Do NOT rephrase sentences.
+
 What to do:
-1. Identify distinct ideas or themes expressed by the speaker.
-2. Group related ideas together.
-3. For each group:
+1. Apply the allowed cleanup so the text is readable and well-formed for AI processing.
+2. Identify distinct ideas or themes expressed by the speaker.
+3. Group related ideas together.
+4. For each group:
    - Create a short, neutral heading that summarizes the theme.
-   - Keep all words exactly as in the original transcript.
-   - Place the original text under the heading without changing word order, punctuation, or phrasing.
-4. Use neutral language only for headings; the text must remain unchanged.
-5. Keep the content faithful to what was said, only organizing it under headings.
+   - Place the cleaned original text under the heading.
+5. The text under each heading must remain faithful to the original wording and order.
 
 Output format rules:
 - Output valid JSON only.
-- Do NOT include any explanations or extra text.
+- Do NOT include explanations or extra text.
 - Do NOT use markdown, symbols, or formatting.
 - The output must match this exact schema:
 

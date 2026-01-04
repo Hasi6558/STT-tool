@@ -566,17 +566,26 @@ export default function TextEditor({
   };
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
       <style>{`
       textarea::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
       }
       textarea::-webkit-scrollbar-thumb {
         background-color: rgb(156 163 175);
-        border-radius: 3px;
+        border-radius: 4px;
+      }
+      textarea::-webkit-scrollbar-thumb:hover {
+        background-color: rgb(107 114 128);
       }
       textarea::-webkit-scrollbar-track {
         background: transparent;
+      }
+      
+      /* Firefox */
+      textarea {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(156 163 175) transparent;
       }
     `}</style>
 
@@ -666,7 +675,7 @@ export default function TextEditor({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1">
+          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300">
             <Textarea
               placeholder={
                 mode === "classic"
@@ -675,7 +684,7 @@ export default function TextEditor({
               }
               ref={textareaRef}
               className={
-                "min-h-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black whitespace-pre-wrap overflow-auto border border-gray-300 w-full rounded-2xl resize-y focus:outline-none focus:ring-2 focus:ring-[#30c2a1] focus:border-[#30c2a1]"
+                "min-h-[400px] w-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#30c2a1] resize-y focus:border-[#30c2a1] overflow-y-auto !field-sizing-normal"
               }
               style={{
                 scrollbarWidth: "thin",

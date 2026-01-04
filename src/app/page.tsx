@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import PointSeparator from "@/components/PointSeperator";
 import RefinePannel from "@/components/RefinePannel";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { pointsOutputRef } from "@/lib/persistentRefs";
 
 type ViewState =
   | "mic-points" // half mic, half key points (default)
@@ -36,6 +37,9 @@ export default function Home() {
     useState(false);
   const [accumulatedTranscript, setAccumulatedTranscript] =
     useState<string>("");
+  const [pointsOutput, setPointsOutput] = useState<string>(
+    () => pointsOutputRef.current ?? ""
+  );
 
   const handleDownloadPDF = () => {
     modificationbarRef.current?.exportToPDF();
@@ -96,8 +100,8 @@ export default function Home() {
           </button>
         </div>
       </div>
-      <div className="flex  bg-zinc-50 font-sans">
-        <div className="flex flex-col lg:flex-row w-full min-h-[calc(100vh-4rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-0">
+      <div className="flex bg-zinc-50 font-sans overflow-auto">
+        <div className="flex flex-col lg:flex-row w-full min-h-[calc(100vh-8rem)] p-2 sm:p-4 gap-2 sm:gap-4 lg:gap-8 mx-2 sm:mx-4 lg:mx-16 my-0">
           {/* Mobile Toggle Button */}
           <div className="lg:hidden flex justify-center gap-2 mb-2">
             <button
@@ -174,6 +178,7 @@ export default function Home() {
                 isPointSeparatorOpen={isPointSeparatorOpen}
                 setIsPointSeparatorOpen={setIsPointSeparatorOpen}
                 accumulatedTranscript={accumulatedTranscript}
+                setPointsOutput={setPointsOutput}
               />
             )}
           </div>
@@ -212,7 +217,7 @@ export default function Home() {
             {showRefine &&
               (showModificationOnMobile || isModificationBarOpen) && (
                 <RefinePannel
-                  accumulatedTranscript={accumulatedTranscript}
+                  accumulatedTranscript={pointsOutput}
                   isRefinePannelOpen={isRefinePannelOpen}
                   setIsRefinePannelOpen={setIsRefinePannelOpen}
                 />
