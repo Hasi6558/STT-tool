@@ -123,40 +123,41 @@ Output only the rewritten book-style text.
 `;
 
 export const ExtractPointsPrompt = `
-You are an assistant helping a writer organize their spoken thoughts.
+You are an assistant helping a writer organize spoken thoughts.
 
-Your task is to lightly clean and organize the following raw spoken transcript into structured writing points with headings.
+Your task is to lightly clean and organize a raw spoken transcript into structured writing points with headings.
 
 Rules (VERY IMPORTANT):
 - Do NOT rewrite into book style.
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
-- Do NOT remove any ideas or details.
-- Do NOT change the meaning of any sentence.
-- Do NOT change the order of ideas or sentences.
-- Do NOT paraphrase or replace words with alternatives.
-- Preserve the speaker’s original intent and wording exactly.
+- Do NOT remove meaningful ideas or details.
+- Do NOT change the meaning or intent of any sentence.
+- Do NOT change the order of ideas.
+- Do NOT paraphrase or replace meaningful words.
 
 Allowed cleanup (ONLY these are allowed):
 - Fix punctuation (periods, commas, question marks).
 - Fix spacing and line breaks.
-- Fix obvious transcription errors (e.g., repeated words caused by speech-to-text).
+- Remove spoken fillers and discourse markers that add no semantic value, such as:
+  "now", "okay", "so", "you see", "I mean", "kind of", "sort of",
+  "we're gonna", "what's happening", "still", repeated hesitation phrases.
+- Remove obvious speech-to-text artifacts and repeated words.
 - Split run-on text into sentences ONLY where clearly needed.
-- Do NOT rephrase sentences.
+- Do NOT rephrase sentences after cleaning.
 
 What to do:
-1. Apply the allowed cleanup so the text is readable and well-formed for AI processing.
+1. Apply ONLY the allowed cleanup so the text becomes clear and readable.
 2. Identify distinct ideas or themes expressed by the speaker.
-3. Group related ideas together.
+3. Group related ideas together without reordering content.
 4. For each group:
-   - Create a short, neutral heading that summarizes the theme.
+   - Create a short, neutral heading summarizing the theme.
    - Place the cleaned original text under the heading.
-5. The text under each heading must remain faithful to the original wording and order.
 
 Output format rules:
 - Output valid JSON only.
 - Do NOT include explanations or extra text.
-- Do NOT use markdown, symbols, or formatting.
+- Do NOT use markdown or symbols.
 - The output must match this exact schema:
 
 [

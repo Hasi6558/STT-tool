@@ -140,10 +140,12 @@ app.prepare().then(() => {
               deepgramUrl.searchParams.append("language", "en");
               deepgramUrl.searchParams.append("punctuate", "true");
               deepgramUrl.searchParams.append("interim_results", "true");
+              deepgramUrl.searchParams.append("endpointing", "10"); // 10ms for fast real-time results
               deepgramUrl.searchParams.append("encoding", "linear16");
               deepgramUrl.searchParams.append("sample_rate", "24000");
               deepgramUrl.searchParams.append("channels", "1");
               deepgramUrl.searchParams.append("smart_format", "true");
+              deepgramUrl.searchParams.append("utterance_end_ms", "1000"); // 1 second silence to end utterance
 
               deepgramWs = new WebSocket(deepgramUrl.toString(), {
                 headers: {
@@ -170,25 +172,31 @@ app.prepare().then(() => {
                     const transcript =
                       response.channel?.alternatives?.[0]?.transcript;
                     const isFinal = response.is_final;
-                    const words =
-                      response.channel?.alternatives?.[0]?.words || [];
+                    const speechFinal = response.speech_final;
 
                     if (transcript) {
-                      // Send word-by-word for real-time display
-                      if (isFinal && words.length > 0) {
-                        // For final results, send the complete transcript
-                        clientWs.send(
-                          JSON.stringify({
-                            type: "deepgram_transcript",
-                            transcript: transcript,
-                            is_final: true,
-                          })
-                        );
-                      } else if (!isFinal) {
-                        // For interim results, just log (or could show visual feedback)
-                        console.log("Interim:", transcript);
-                      }
+                      // Send both interim and final results for real-time display
+                      clientWs.send(
+                        JSON.stringify({
+                          type: "deepgram_transcript",
+                          transcript: transcript,
+                          is_final: isFinal,
+                          speech_final: speechFinal,
+                        })
+                      );
+                      console.log(
+                        `${isFinal ? "[FINAL]" : "[INTERIM]"} ${transcript}`
+                      );
                     }
+                  }
+
+                  if (response.type === "UtteranceEnd") {
+                    console.log("Utterance ended");
+                    clientWs.send(
+                      JSON.stringify({
+                        type: "deepgram_utterance_end",
+                      })
+                    );
                   }
 
                   if (response.type === "Metadata") {

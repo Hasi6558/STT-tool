@@ -10,6 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowRight, ArrowRightFromLine, Mic, Text, Zap } from "lucide-react";
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
@@ -56,6 +63,11 @@ export default function TextEditor({
     >
   >(new Map());
   const currentItemIdRef = useRef<string | null>(null);
+
+  // Pro mode: track the current utterance for real-time display
+  const utteranceStartPosRef = useRef<number | null>(null); // Position where current utterance started
+  const currentUtteranceLenRef = useRef<number>(0); // Length of current utterance text in document
+  const finalizedTextRef = useRef<string>(""); // Text that has been finalized (won't change)
 
   useEffect(() => {
     textRef.current = accumulatedTranscript;
@@ -253,6 +265,9 @@ export default function TextEditor({
       // Clear current session transcript items but keep accumulated transcript
       transcriptItemsRef.current.clear();
       currentItemIdRef.current = null;
+      utteranceStartPosRef.current = null;
+      currentUtteranceLenRef.current = 0;
+      finalizedTextRef.current = "";
       setTranscript("");
 
       // Request microphone access (guard for environments without mediaDevices)
@@ -310,26 +325,109 @@ export default function TextEditor({
         switch (data.type) {
           case "ready":
             setStatus(
-              mode === "pro" ? "Recording (Real-time)..." : "Recording..."
+              mode === "pro" ? "Recording\n(Realtime - Faster)..." : "Recording\n(Sentence Transcription - Higher Quality)..."
             );
             break;
 
           // Pro mode (Deepgram) events
           case "deepgram_transcript":
-            if (data.transcript && data.is_final) {
-              // Final transcript from Deepgram - insert with space
-              insertTextAtCursor(data.transcript);
-            } else if (data.transcript && !data.is_final) {
-              // Interim results - could show visual feedback but don't insert
-              console.log("Interim:", data.transcript);
+            if (data.transcript) {
+              const textarea = textareaRef.current;
+              if (!textarea) break;
+
+              // Initialize utterance start position if not set
+              if (utteranceStartPosRef.current === null) {
+                utteranceStartPosRef.current =
+                  cursorRef.current ?? textarea.value.length;
+              }
+
+              const startPos = utteranceStartPosRef.current;
+              const finalizedLen = finalizedTextRef.current.length;
+              const currentText = textRef.current ?? "";
+              const fullTranscript = data.transcript as string;
+
+              // Only update the portion AFTER finalized text
+              // Keep finalized text intact, only replace the interim portion
+              const lockedText = finalizedTextRef.current;
+              const newPortionFromTranscript =
+                fullTranscript.slice(finalizedLen);
+
+              // Build the new text:
+              // [before utterance] + [finalized text] + [new interim portion] + [after utterance]
+              const beforeUtterance = currentText.slice(0, startPos);
+              const afterUtterance = currentText.slice(
+                startPos + currentUtteranceLenRef.current
+              );
+              const newText =
+                beforeUtterance +
+                lockedText +
+                newPortionFromTranscript +
+                afterUtterance;
+
+              // Update state
+              textRef.current = newText;
+              setAccumulatedTranscript(newText);
+              currentUtteranceLenRef.current =
+                lockedText.length + newPortionFromTranscript.length;
+
+              // Update cursor position to end of current transcript
+              const newPos = startPos + currentUtteranceLenRef.current;
+              cursorRef.current = newPos;
+
+              requestAnimationFrame(() => {
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = newPos;
+              });
+
+              // If is_final, lock in this portion of the transcript
+              if (data.is_final) {
+                finalizedTextRef.current = fullTranscript;
+              }
+
+              // If speech_final, finalize this utterance and prepare for next
+              if (data.speech_final) {
+                // Add a space after the finalized utterance
+                const textWithSpace =
+                  textRef.current.slice(0, newPos) +
+                  " " +
+                  textRef.current.slice(newPos);
+                textRef.current = textWithSpace;
+                setAccumulatedTranscript(textWithSpace);
+
+                // Reset for next utterance
+                cursorRef.current = newPos + 1;
+                currentUtteranceLenRef.current = 0;
+                utteranceStartPosRef.current = newPos + 1;
+                finalizedTextRef.current = "";
+              }
             }
             break;
 
-          case "deepgram_word":
-            // Real-time word-by-word from Deepgram
-            if (data.word) {
-              insertStreamingText(data.word + " ");
+          case "deepgram_utterance_end":
+            // Utterance ended - finalize current position and reset for next
+            if (currentUtteranceLenRef.current > 0) {
+              const startPos = utteranceStartPosRef.current ?? 0;
+              const endPos = startPos + currentUtteranceLenRef.current;
+              const currentText = textRef.current ?? "";
+
+              // Add space after utterance if needed
+              if (
+                endPos <= currentText.length &&
+                !currentText.slice(endPos).startsWith(" ")
+              ) {
+                const newText =
+                  currentText.slice(0, endPos) +
+                  " " +
+                  currentText.slice(endPos);
+                textRef.current = newText;
+                setAccumulatedTranscript(newText);
+                cursorRef.current = endPos + 1;
+              }
             }
+            // Reset for next utterance
+            currentUtteranceLenRef.current = 0;
+            utteranceStartPosRef.current = cursorRef.current;
+            finalizedTextRef.current = "";
             break;
 
           // Classic mode (OpenAI) events
@@ -643,43 +741,49 @@ export default function TextEditor({
             </div>
             {/* Mode Toggle */}
             <div className="absolute right-4 top-4">
-              <div className="flex gap-1 bg-white/20 p-1 rounded-lg backdrop-blur-sm">
-                <Button
-                  onClick={() => setMode("classic")}
-                  disabled={isMicOn}
-                  className={`px-3 py-1 text-xs font-semibold rounded transition-all ${
-                    mode === "classic"
-                      ? "bg-white text-gray-800 shadow-md"
-                      : "bg-transparent text-white hover:bg-white/20"
-                  } ${isMicOn ? "opacity-50 cursor-not-allowed" : ""}`}
-                  variant="ghost"
-                  size="sm"
-                >
-                  Classic
-                </Button>
-                <Button
-                  onClick={() => setMode("pro")}
-                  disabled={isMicOn}
-                  className={`px-3 py-1 text-xs font-semibold rounded transition-all flex items-center gap-1 ${
-                    mode === "pro"
-                      ? "bg-white text-gray-800 shadow-md"
-                      : "bg-transparent text-white hover:bg-white/20"
-                  } ${isMicOn ? "opacity-50 cursor-not-allowed" : ""}`}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <Zap className="h-3 w-3" />
-                  Pro
-                </Button>
-              </div>
+              <Select
+                value={mode}
+                onValueChange={(value: string) => setMode(value as TranscriptionMode)}
+                disabled={isMicOn}
+              >
+                <SelectTrigger className="w-auto h-auto p-0 bg-transparent border-none text-white hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed font-medium gap-2 shadow-none focus:ring-0 focus:ring-offset-0">
+                  <SelectValue placeholder="Select mode">
+                    {mode === "classic" ? (
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-semibold">Sentence Transcription</span>
+                        <span className="text-xs opacity-90">(Higher Quality)</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-semibold">Realtime</span>
+                        <span className="text-xs opacity-90">(Faster)</span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 shadow-lg">
+                  <SelectItem value="classic" className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50">
+                    <div className="flex flex-col py-1">
+                      <span className="font-semibold text-gray-900">Sentence Transcription</span>
+                      <span className="text-xs text-gray-500">(Higher Quality)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pro" className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50">
+                    <div className="flex flex-col py-1">
+                      <span className="font-semibold text-gray-900">Realtime</span>
+                      <span className="text-xs text-gray-500">(Faster)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300">
             <Textarea
               placeholder={
                 mode === "classic"
-                  ? "No transcript yet. Click the microphone to start recording. (Sentence mode)"
-                  : "No transcript yet. Click the microphone to start recording. (Real-time streaming)"
+                  ? "No transcript yet. Click the microphone to start recording.\n(Sentence Transcription - Higher Quality)"
+                  : "No transcript yet. Click the microphone to start recording.\n(Realtime - Faster)"
               }
               ref={textareaRef}
               className={
