@@ -68,6 +68,7 @@ export default function TextEditor({
   const utteranceStartPosRef = useRef<number | null>(null); // Position where current utterance started
   const currentUtteranceLenRef = useRef<number>(0); // Length of current utterance text in document
   const finalizedTextRef = useRef<string>(""); // Text that has been finalized (won't change)
+  const recordingStartCursorRef = useRef<number | null>(null); // Cursor position when recording started
 
   useEffect(() => {
     textRef.current = accumulatedTranscript;
@@ -260,6 +261,7 @@ export default function TextEditor({
       // Save cursor position before starting recording
       if (textareaRef.current) {
         cursorRef.current = textareaRef.current.selectionStart;
+        recordingStartCursorRef.current = textareaRef.current.selectionStart;
       }
 
       // Clear current session transcript items but keep accumulated transcript
@@ -325,7 +327,9 @@ export default function TextEditor({
         switch (data.type) {
           case "ready":
             setStatus(
-              mode === "pro" ? "Recording\n(Realtime - Faster)..." : "Recording\n(Sentence Transcription - Higher Quality)..."
+              mode === "pro"
+                ? "Recording\n(Realtime - Faster)..."
+                : "Recording\n(Sentence Transcription - Higher Quality)..."
             );
             break;
 
@@ -335,10 +339,12 @@ export default function TextEditor({
               const textarea = textareaRef.current;
               if (!textarea) break;
 
-              // Initialize utterance start position if not set
+              // Initialize utterance start position if not set - use the saved recording start position
               if (utteranceStartPosRef.current === null) {
                 utteranceStartPosRef.current =
-                  cursorRef.current ?? textarea.value.length;
+                  recordingStartCursorRef.current ??
+                  cursorRef.current ??
+                  textarea.value.length;
               }
 
               const startPos = utteranceStartPosRef.current;
@@ -743,15 +749,21 @@ export default function TextEditor({
             <div className="absolute right-4 top-4">
               <Select
                 value={mode}
-                onValueChange={(value: string) => setMode(value as TranscriptionMode)}
+                onValueChange={(value: string) =>
+                  setMode(value as TranscriptionMode)
+                }
                 disabled={isMicOn}
               >
                 <SelectTrigger className="w-auto h-auto p-0 bg-transparent border-none text-white hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed font-medium gap-2 shadow-none focus:ring-0 focus:ring-offset-0">
                   <SelectValue placeholder="Select mode">
                     {mode === "classic" ? (
                       <div className="flex flex-col items-start">
-                        <span className="text-sm font-semibold">Sentence Transcription</span>
-                        <span className="text-xs opacity-90">(Higher Quality)</span>
+                        <span className="text-sm font-semibold">
+                          Sentence Transcription
+                        </span>
+                        <span className="text-xs opacity-90">
+                          (Higher Quality)
+                        </span>
                       </div>
                     ) : (
                       <div className="flex flex-col items-start">
@@ -762,15 +774,27 @@ export default function TextEditor({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  <SelectItem value="classic" className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50">
+                  <SelectItem
+                    value="classic"
+                    className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50"
+                  >
                     <div className="flex flex-col py-1">
-                      <span className="font-semibold text-gray-900">Sentence Transcription</span>
-                      <span className="text-xs text-gray-500">(Higher Quality)</span>
+                      <span className="font-semibold text-gray-900">
+                        Sentence Transcription
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        (Higher Quality)
+                      </span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="pro" className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50">
+                  <SelectItem
+                    value="pro"
+                    className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50"
+                  >
                     <div className="flex flex-col py-1">
-                      <span className="font-semibold text-gray-900">Realtime</span>
+                      <span className="font-semibold text-gray-900">
+                        Realtime
+                      </span>
                       <span className="text-xs text-gray-500">(Faster)</span>
                     </div>
                   </SelectItem>
