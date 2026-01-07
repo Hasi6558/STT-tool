@@ -348,36 +348,27 @@ export default function TextEditor({
               }
 
               const startPos = utteranceStartPosRef.current;
-              const finalizedLen = finalizedTextRef.current.length;
               const currentText = textRef.current ?? "";
               const fullTranscript = data.transcript as string;
 
-              // Only update the portion AFTER finalized text
-              // Keep finalized text intact, only replace the interim portion
-              const lockedText = finalizedTextRef.current;
-              const newPortionFromTranscript =
-                fullTranscript.slice(finalizedLen);
+              // CORRECT APPROACH: Deepgram sends FULL transcript each time for current utterance
+              // Simply replace the current utterance region with the new transcript
+              // This allows Deepgram to correct mistakes naturally
 
-              // Build the new text:
-              // [before utterance] + [finalized text] + [new interim portion] + [after utterance]
               const beforeUtterance = currentText.slice(0, startPos);
               const afterUtterance = currentText.slice(
                 startPos + currentUtteranceLenRef.current
               );
-              const newText =
-                beforeUtterance +
-                lockedText +
-                newPortionFromTranscript +
-                afterUtterance;
 
-              // Update state
+              // Build new text by replacing current utterance
+              const newText = beforeUtterance + fullTranscript + afterUtterance;
+
+              // Update everything
               textRef.current = newText;
               setAccumulatedTranscript(newText);
-              currentUtteranceLenRef.current =
-                lockedText.length + newPortionFromTranscript.length;
+              currentUtteranceLenRef.current = fullTranscript.length;
 
-              // Update cursor position to end of current transcript
-              const newPos = startPos + currentUtteranceLenRef.current;
+              const newPos = startPos + fullTranscript.length;
               cursorRef.current = newPos;
 
               requestAnimationFrame(() => {
@@ -385,25 +376,21 @@ export default function TextEditor({
                 textarea.selectionStart = textarea.selectionEnd = newPos;
               });
 
-              // If is_final, lock in this portion of the transcript
-              if (data.is_final) {
-                finalizedTextRef.current = fullTranscript;
-              }
-
               // If speech_final, finalize this utterance and prepare for next
               if (data.speech_final) {
+                const currentPos = startPos + currentUtteranceLenRef.current;
                 // Add a space after the finalized utterance
                 const textWithSpace =
-                  textRef.current.slice(0, newPos) +
+                  textRef.current.slice(0, currentPos) +
                   " " +
-                  textRef.current.slice(newPos);
+                  textRef.current.slice(currentPos);
                 textRef.current = textWithSpace;
                 setAccumulatedTranscript(textWithSpace);
 
                 // Reset for next utterance
-                cursorRef.current = newPos + 1;
+                cursorRef.current = currentPos + 1;
                 currentUtteranceLenRef.current = 0;
-                utteranceStartPosRef.current = newPos + 1;
+                utteranceStartPosRef.current = currentPos + 1;
                 finalizedTextRef.current = "";
               }
             }

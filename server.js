@@ -140,12 +140,12 @@ app.prepare().then(() => {
               deepgramUrl.searchParams.append("language", "en");
               deepgramUrl.searchParams.append("punctuate", "true");
               deepgramUrl.searchParams.append("interim_results", "true");
-              deepgramUrl.searchParams.append("endpointing", "10"); // 10ms for fast real-time results
+              deepgramUrl.searchParams.append("endpointing", "10"); // 300ms for fast real-time results
               deepgramUrl.searchParams.append("encoding", "linear16");
               deepgramUrl.searchParams.append("sample_rate", "24000");
               deepgramUrl.searchParams.append("channels", "1");
               deepgramUrl.searchParams.append("smart_format", "true");
-              deepgramUrl.searchParams.append("utterance_end_ms", "1000"); // 1 second silence to end utterance
+              deepgramUrl.searchParams.append("utterance_end_ms", "1000"); // 2 seconds silence to end utterance
 
               deepgramWs = new WebSocket(deepgramUrl.toString(), {
                 headers: {
