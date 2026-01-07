@@ -10,9 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, ArrowRightFromLine, Mic, Text } from "lucide-react";
+import { ArrowRight, ArrowRightFromLine, ChevronDown, Mic, Text, Zap } from "lucide-react";
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
+
+type TranscriptionMode = "sentence" | "realtime";
 
 interface TextEditorProps {
   isMicSectionOpen: boolean;
@@ -31,6 +33,9 @@ export default function TextEditor({
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
+  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>("sentence");
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [interimTranscript, setInterimTranscript] = useState<string>("");
 
   const cursorRef = useRef<number | null>(null);
 
@@ -53,10 +58,16 @@ export default function TextEditor({
     >
   >(new Map());
   const currentItemIdRef = useRef<string | null>(null);
+  const transcriptionModeRef = useRef<TranscriptionMode>("sentence");
+  const finalizedTextRef = useRef<string>(""); // Track finalized text for realtime mode
 
   useEffect(() => {
     textRef.current = accumulatedTranscript;
   }, [accumulatedTranscript]);
+
+  useEffect(() => {
+    transcriptionModeRef.current = transcriptionMode;
+  }, [transcriptionMode]);
 
   useEffect(() => {
     // Check for microphone availability on component mount (guard for server and unsupported browsers)
@@ -274,8 +285,13 @@ export default function TextEditor({
         console.log("WebSocket connected");
         setStatus("Connecting to transcription service...");
 
-        // Initialize transcription session
-        ws.send(JSON.stringify({ type: "init" }));
+        // Initialize transcription session with selected mode
+        ws.send(JSON.stringify({ type: "init", mode: transcriptionModeRef.current }));
+        
+        // Reset finalized text tracker for realtime mode
+        if (transcriptionModeRef.current === "realtime") {
+          finalizedTextRef.current = "";
+        }
       };
 
       ws.onmessage = (event) => {
@@ -383,6 +399,31 @@ export default function TextEditor({
             setStatus("Disconnected");
             break;
 
+          // ===== DEEPGRAM REALTIME MODE EVENTS =====
+          case "deepgram_transcript":
+            if (data.is_final && data.transcript) {
+              // Final transcript - append to accumulated text
+              console.log("[Deepgram] Final transcript:", data.transcript);
+              insertTextAtCursor(data.transcript);
+              setInterimTranscript(""); // Clear interim display
+              setStatus("Recording...");
+            } else if (!data.is_final && data.transcript) {
+              // Interim transcript - show as preview only, don't insert
+              console.log("[Deepgram] Interim:", data.transcript);
+              setInterimTranscript(data.transcript);
+              setStatus("Listening...");
+            }
+            break;
+
+          case "deepgram_speech_started":
+            setStatus("Speech detected...");
+            break;
+
+          case "deepgram_utterance_end":
+            setInterimTranscript(""); // Clear interim on utterance end
+            setStatus("Recording...");
+            break;
+
           default:
             // Log unhandled events for debugging
             console.log("Unhandled event type:", data.type);
@@ -487,6 +528,9 @@ export default function TextEditor({
         wsRef.current = null;
       }
 
+      // Clear interim transcript for realtime mode
+      setInterimTranscript("");
+
       if (transcript.trim()) {
         const currentFull = textareaRef.current
           ? textareaRef.current.value
@@ -575,7 +619,7 @@ export default function TextEditor({
                 <span className="text-white mb-4">{status}</span>
               </div>
             </div>
-            <div className="absolute left-4 top-4">
+            <div className="absolute left-4 top-4 flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-md font-semibold uppercase tracking-wide ${
                   isMicOn && isMicConnected
@@ -587,8 +631,78 @@ export default function TextEditor({
                 Stage 1
               </span>
             </div>
+            {/* Mode Selector Dropdown */}
+            <div className="absolute right-4 top-4">
+              <div className="relative">
+                <button
+                  onClick={() => !isMicOn && setIsDropdownOpen(!isDropdownOpen)}
+                  disabled={isMicOn}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isMicOn
+                      ? "bg-white/20 text-white/60 cursor-not-allowed"
+                      : "bg-white/30 hover:bg-white/40 text-white cursor-pointer"
+                  }`}
+                >
+                  {transcriptionMode === "sentence" ? (
+                    <>
+                      <Text className="h-4 w-4" />
+                      Sentence Mode
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      RealTime Mode
+                    </>
+                  )}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isDropdownOpen && !isMicOn && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        setTranscriptionMode("sentence");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                        transcriptionMode === "sentence" ? "bg-green-50 text-green-700" : "text-gray-700"
+                      }`}
+                    >
+                      <Text className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Sentence Mode</div>
+                        <div className="text-xs text-gray-500">OpenAI GPT-4o</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTranscriptionMode("realtime");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                        transcriptionMode === "realtime" ? "bg-green-50 text-green-700" : "text-gray-700"
+                      }`}
+                    >
+                      <Zap className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">RealTime Mode</div>
+                        <div className="text-xs text-gray-500">Deepgram Nova 3</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1">
+            {/* Interim transcript preview for realtime mode */}
+            {transcriptionMode === "realtime" && interimTranscript && (
+              <div className="w-full mb-2 px-2">
+                <div className="text-sm text-gray-500 italic bg-gray-100 rounded-lg px-3 py-2 animate-pulse">
+                  <span className="font-medium text-gray-600">Listening: </span>
+                  {interimTranscript}
+                </div>
+              </div>
+            )}
             <Textarea
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
