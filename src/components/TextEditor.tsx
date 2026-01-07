@@ -45,6 +45,11 @@ export default function TextEditor({
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [interimTranscript, setInterimTranscript] = useState<string>("");
 
+  // State for inline interim display in realtime mode
+  const [baseTextBefore, setBaseTextBefore] = useState<string>("");
+  const [baseTextAfter, setBaseTextAfter] = useState<string>("");
+  const [finalizedSessionText, setFinalizedSessionText] = useState<string>("");
+
   const cursorRef = useRef<number | null>(null);
 
   const textRef = useRef(accumulatedTranscript);
@@ -69,6 +74,9 @@ export default function TextEditor({
   const transcriptionModeRef = useRef<TranscriptionMode>("sentence");
   const finalizedTextRef = useRef<string>(""); // Track finalized text for realtime mode
 
+  // Refs for tracking insertion point
+  const insertionPointRef = useRef<number>(0);
+
   useEffect(() => {
     textRef.current = accumulatedTranscript;
   }, [accumulatedTranscript]);
@@ -76,6 +84,34 @@ export default function TextEditor({
   useEffect(() => {
     transcriptionModeRef.current = transcriptionMode;
   }, [transcriptionMode]);
+
+  // Sync accumulated transcript when finalized text changes in realtime mode
+  useEffect(() => {
+    if (transcriptionMode === "realtime" && isMicOn && finalizedSessionText) {
+      const completeText =
+        baseTextBefore + finalizedSessionText + baseTextAfter;
+      textRef.current = completeText;
+      setAccumulatedTranscript(completeText);
+
+      // Update cursor position
+      const newCursorPos = baseTextBefore.length + finalizedSessionText.length;
+      cursorRef.current = newCursorPos;
+
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart =
+            textareaRef.current.selectionEnd = newCursorPos;
+        }
+      });
+    }
+  }, [
+    finalizedSessionText,
+    baseTextBefore,
+    baseTextAfter,
+    transcriptionMode,
+    isMicOn,
+    setAccumulatedTranscript,
+  ]);
 
   useEffect(() => {
     // Check for microphone availability on component mount (guard for server and unsupported browsers)
@@ -204,6 +240,35 @@ export default function TextEditor({
     return orderedTexts.join(" ");
   };
 
+  // Function to update insertion point when cursor moves during realtime recording
+  const updateRealtimeInsertionPoint = (newCursorPos: number) => {
+    if (transcriptionModeRef.current !== "realtime" || !isMicOn) return;
+    
+    // Build the current complete text from the current state
+    const currentCompleteText = baseTextBefore + finalizedSessionText + baseTextAfter;
+    
+    // Clamp cursor position to valid range
+    const clampedPos = Math.max(0, Math.min(newCursorPos, currentCompleteText.length));
+    
+    // Re-split the text at the new cursor position
+    setBaseTextBefore(currentCompleteText.slice(0, clampedPos));
+    setBaseTextAfter(currentCompleteText.slice(clampedPos));
+    setFinalizedSessionText("");
+    
+    // Update the ref
+    textRef.current = currentCompleteText;
+    setAccumulatedTranscript(currentCompleteText);
+    
+    // Update cursor ref
+    cursorRef.current = clampedPos;
+    insertionPointRef.current = clampedPos;
+    
+    // Clear any interim transcript since we're starting fresh at new position
+    setInterimTranscript("");
+    
+    console.log(`[Realtime] Updated insertion point to ${clampedPos}`);
+  };
+
   const insertTextAtCursor = (text: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -301,6 +366,13 @@ export default function TextEditor({
         // Reset finalized text tracker for realtime mode
         if (transcriptionModeRef.current === "realtime") {
           finalizedTextRef.current = "";
+          // Store the base text split at cursor for inline interim display
+          const currentText = textRef.current ?? "";
+          const insertPos = cursorRef.current ?? currentText.length;
+          insertionPointRef.current = insertPos;
+          setBaseTextBefore(currentText.slice(0, insertPos));
+          setBaseTextAfter(currentText.slice(insertPos));
+          setFinalizedSessionText("");
         }
       };
 
@@ -412,13 +484,26 @@ export default function TextEditor({
           // ===== DEEPGRAM REALTIME MODE EVENTS =====
           case "deepgram_transcript":
             if (data.is_final && data.transcript) {
-              // Final transcript - append to accumulated text
+              // Final transcript - add to finalized session text
               console.log("[Deepgram] Final transcript:", data.transcript);
-              insertTextAtCursor(data.transcript);
-              setInterimTranscript(""); // Clear interim display
+
+              // Use functional update to get latest state values
+              setFinalizedSessionText((prevFinalized) => {
+                const spacer = prevFinalized ? " " : "";
+                const newFinalized = prevFinalized + spacer + data.transcript;
+
+                // We need to update accumulated transcript in a separate effect
+                // For now, store in ref for immediate access
+                finalizedTextRef.current = newFinalized;
+
+                return newFinalized;
+              });
+
+              // Clear interim display
+              setInterimTranscript("");
               setStatus("Recording...");
             } else if (!data.is_final && data.transcript) {
-              // Interim transcript - show as preview only, don't insert
+              // Interim transcript - show inline at cursor position
               console.log("[Deepgram] Interim:", data.transcript);
               setInterimTranscript(data.transcript);
               setStatus("Listening...");
@@ -540,6 +625,11 @@ export default function TextEditor({
 
       // Clear interim transcript for realtime mode
       setInterimTranscript("");
+
+      // Reset realtime mode state
+      setBaseTextBefore("");
+      setBaseTextAfter("");
+      setFinalizedSessionText("");
 
       if (transcript.trim()) {
         const currentFull = textareaRef.current
@@ -716,15 +806,6 @@ export default function TextEditor({
             </div>
           </CardHeader>
           <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300 flex-1">
-            {/* Interim transcript preview for realtime mode */}
-            {transcriptionMode === "realtime" && interimTranscript && (
-              <div className="w-full mb-2 px-2">
-                <div className="text-sm text-gray-500 italic bg-gray-100 rounded-lg px-3 py-2 animate-pulse">
-                  <span className="font-medium text-gray-600">Listening: </span>
-                  {interimTranscript}
-                </div>
-              </div>
-            )}
             <Textarea
               placeholder={
                 "No transcript yet. Click the microphone to start recording."
@@ -738,20 +819,63 @@ export default function TextEditor({
                 scrollbarColor: "rgb(156 163 175) transparent",
               }}
               disabled={false}
-              value={accumulatedTranscript}
+              value={
+                // For realtime mode during recording, show interim text inline at cursor position
+                transcriptionMode === "realtime" && isMicOn && interimTranscript
+                  ? baseTextBefore +
+                    finalizedSessionText +
+                    (finalizedSessionText ? " " : "") +
+                    interimTranscript +
+                    baseTextAfter
+                  : accumulatedTranscript
+              }
               onChange={(e) => {
-                cursorRef.current = e.target.selectionStart;
-                setAccumulatedTranscript(e.target.value);
-                textRef.current = e.target.value;
+                const newPos = e.target.selectionStart;
+                cursorRef.current = newPos;
+                
+                // If in realtime recording mode, we need to handle the change specially
+                if (transcriptionMode === "realtime" && isMicOn) {
+                  // Update the accumulated transcript and re-establish insertion point
+                  const newValue = e.target.value;
+                  textRef.current = newValue;
+                  setAccumulatedTranscript(newValue);
+                  
+                  // Re-split at cursor position
+                  setBaseTextBefore(newValue.slice(0, newPos));
+                  setBaseTextAfter(newValue.slice(newPos));
+                  setFinalizedSessionText("");
+                  setInterimTranscript("");
+                } else {
+                  setAccumulatedTranscript(e.target.value);
+                  textRef.current = e.target.value;
+                }
               }}
               onClick={() => {
                 if (textareaRef.current) {
-                  cursorRef.current = textareaRef.current.selectionStart;
+                  const newPos = textareaRef.current.selectionStart;
+                  cursorRef.current = newPos;
+                  
+                  // Update insertion point if in realtime recording mode
+                  if (transcriptionMode === "realtime" && isMicOn) {
+                    // Use setTimeout to ensure we get the position after the click is processed
+                    setTimeout(() => {
+                      if (textareaRef.current) {
+                        updateRealtimeInsertionPoint(textareaRef.current.selectionStart);
+                      }
+                    }, 0);
+                  }
                 }
               }}
-              onKeyUp={() => {
+              onKeyUp={(e) => {
                 if (textareaRef.current) {
-                  cursorRef.current = textareaRef.current.selectionStart;
+                  const newPos = textareaRef.current.selectionStart;
+                  cursorRef.current = newPos;
+                  
+                  // Update insertion point if in realtime recording mode and navigation key pressed
+                  const navigationKeys = ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
+                  if (transcriptionMode === "realtime" && isMicOn && navigationKeys.includes(e.key)) {
+                    updateRealtimeInsertionPoint(newPos);
+                  }
                 }
               }}
             />
