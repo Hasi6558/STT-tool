@@ -10,7 +10,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, ArrowRightFromLine, ChevronDown, Mic, Text, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowRightFromLine,
+  ChevronDown,
+  Mic,
+  Text,
+  Zap,
+} from "lucide-react";
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
 
@@ -33,7 +40,8 @@ export default function TextEditor({
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
-  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>("sentence");
+  const [transcriptionMode, setTranscriptionMode] =
+    useState<TranscriptionMode>("sentence");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [interimTranscript, setInterimTranscript] = useState<string>("");
 
@@ -286,8 +294,10 @@ export default function TextEditor({
         setStatus("Connecting to transcription service...");
 
         // Initialize transcription session with selected mode
-        ws.send(JSON.stringify({ type: "init", mode: transcriptionModeRef.current }));
-        
+        ws.send(
+          JSON.stringify({ type: "init", mode: transcriptionModeRef.current })
+        );
+
         // Reset finalized text tracker for realtime mode
         if (transcriptionModeRef.current === "realtime") {
           finalizedTextRef.current = "";
@@ -654,7 +664,11 @@ export default function TextEditor({
                       RealTime Mode
                     </>
                   )}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
                 {isDropdownOpen && !isMicOn && (
                   <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
@@ -664,13 +678,17 @@ export default function TextEditor({
                         setIsDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "sentence" ? "bg-green-50 text-green-700" : "text-gray-700"
+                        transcriptionMode === "sentence"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700"
                       }`}
                     >
                       <Text className="h-4 w-4" />
                       <div>
                         <div className="font-medium">Sentence Mode</div>
-                        <div className="text-xs text-gray-500">OpenAI GPT-4o</div>
+                        <div className="text-xs text-gray-500">
+                          OpenAI GPT-4o
+                        </div>
                       </div>
                     </button>
                     <button
@@ -679,13 +697,17 @@ export default function TextEditor({
                         setIsDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "realtime" ? "bg-green-50 text-green-700" : "text-gray-700"
+                        transcriptionMode === "realtime"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700"
                       }`}
                     >
                       <Zap className="h-4 w-4" />
                       <div>
                         <div className="font-medium">RealTime Mode</div>
-                        <div className="text-xs text-gray-500">Deepgram Nova 3</div>
+                        <div className="text-xs text-gray-500">
+                          Deepgram Nova 3
+                        </div>
                       </div>
                     </button>
                   </div>

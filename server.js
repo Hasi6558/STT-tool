@@ -169,7 +169,9 @@ app.prepare().then(() => {
 
                       if (transcript) {
                         console.log(
-                          `[Deepgram] ${isFinal ? "FINAL" : "Interim"}: ${transcript}`
+                          `[Deepgram] ${
+                            isFinal ? "FINAL" : "Interim"
+                          }: ${transcript}`
                         );
 
                         // Send transcript to client
