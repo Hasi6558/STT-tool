@@ -243,29 +243,33 @@ export default function TextEditor({
   // Function to update insertion point when cursor moves during realtime recording
   const updateRealtimeInsertionPoint = (newCursorPos: number) => {
     if (transcriptionModeRef.current !== "realtime" || !isMicOn) return;
-    
+
     // Build the current complete text from the current state
-    const currentCompleteText = baseTextBefore + finalizedSessionText + baseTextAfter;
-    
+    const currentCompleteText =
+      baseTextBefore + finalizedSessionText + baseTextAfter;
+
     // Clamp cursor position to valid range
-    const clampedPos = Math.max(0, Math.min(newCursorPos, currentCompleteText.length));
-    
+    const clampedPos = Math.max(
+      0,
+      Math.min(newCursorPos, currentCompleteText.length)
+    );
+
     // Re-split the text at the new cursor position
     setBaseTextBefore(currentCompleteText.slice(0, clampedPos));
     setBaseTextAfter(currentCompleteText.slice(clampedPos));
     setFinalizedSessionText("");
-    
+
     // Update the ref
     textRef.current = currentCompleteText;
     setAccumulatedTranscript(currentCompleteText);
-    
+
     // Update cursor ref
     cursorRef.current = clampedPos;
     insertionPointRef.current = clampedPos;
-    
+
     // Clear any interim transcript since we're starting fresh at new position
     setInterimTranscript("");
-    
+
     console.log(`[Realtime] Updated insertion point to ${clampedPos}`);
   };
 
@@ -832,14 +836,14 @@ export default function TextEditor({
               onChange={(e) => {
                 const newPos = e.target.selectionStart;
                 cursorRef.current = newPos;
-                
+
                 // If in realtime recording mode, we need to handle the change specially
                 if (transcriptionMode === "realtime" && isMicOn) {
                   // Update the accumulated transcript and re-establish insertion point
                   const newValue = e.target.value;
                   textRef.current = newValue;
                   setAccumulatedTranscript(newValue);
-                  
+
                   // Re-split at cursor position
                   setBaseTextBefore(newValue.slice(0, newPos));
                   setBaseTextAfter(newValue.slice(newPos));
@@ -854,13 +858,15 @@ export default function TextEditor({
                 if (textareaRef.current) {
                   const newPos = textareaRef.current.selectionStart;
                   cursorRef.current = newPos;
-                  
+
                   // Update insertion point if in realtime recording mode
                   if (transcriptionMode === "realtime" && isMicOn) {
                     // Use setTimeout to ensure we get the position after the click is processed
                     setTimeout(() => {
                       if (textareaRef.current) {
-                        updateRealtimeInsertionPoint(textareaRef.current.selectionStart);
+                        updateRealtimeInsertionPoint(
+                          textareaRef.current.selectionStart
+                        );
                       }
                     }, 0);
                   }
@@ -870,10 +876,24 @@ export default function TextEditor({
                 if (textareaRef.current) {
                   const newPos = textareaRef.current.selectionStart;
                   cursorRef.current = newPos;
-                  
+
                   // Update insertion point if in realtime recording mode and navigation key pressed
-                  const navigationKeys = ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
-                  if (transcriptionMode === "realtime" && isMicOn && navigationKeys.includes(e.key)) {
+                  const navigationKeys = [
+                    "Enter",
+                    "ArrowUp",
+                    "ArrowDown",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "Home",
+                    "End",
+                    "PageUp",
+                    "PageDown",
+                  ];
+                  if (
+                    transcriptionMode === "realtime" &&
+                    isMicOn &&
+                    navigationKeys.includes(e.key)
+                  ) {
                     updateRealtimeInsertionPoint(newPos);
                   }
                 }
