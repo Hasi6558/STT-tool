@@ -1,15 +1,12 @@
 import {
   ArrowLeftFromLine,
   ArrowUpNarrowWide,
-  BookOpen,
   BookOpenText,
   BrushCleaning,
-  Mic,
-  Send,
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { JSX, useCallback, useState, useEffect } from "react";
+import { JSX, useCallback, useState } from "react";
 import {
   refineFinalTextRef,
   refineCoreArgumentRef,
@@ -122,61 +119,76 @@ const RefinePannel = ({
                 </span>
               </div>
 
-              <div className="flex justify-between items-center">
+              <div className="flex w-full justify-between items-center">
                 <div className="flex-1">
                   <Textarea
-                    className="resize-none h-15 w-full"
+                    className="resize-y h-15 !w-full "
                     placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
                     onChange={(e) => handleTextChange(e.target.value)}
                   />
                 </div>
 
-                <div className="flex flex-col items-start w-[160px] gap-1 ml-3 mr-2 py-1">
-                  <div className="flex flex-row gap-1">
-                    <Button
+                <div className="flex flex-col items-start gap-1 ml-3 mr-2 py-1">
+                  <div className="flex rounded-lg border-2 border-[#30c2a1] overflow-hidden bg-gray-200">
+                    <button
                       onClick={() => setSelectedBtn("clean")}
                       disabled={!accumulatedTranscript || loading}
-                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
                         selectedBtn === "clean"
-                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
-                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
+                          ? "bg-[#30c2a1] text-white"
+                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                      } ${
+                        !accumulatedTranscript || loading
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
                       }`}
                     >
-                      <BrushCleaning className="mr-1" />
-                    </Button>
-                    <Button
-                      onClick={() => setSelectedBtn("book")}
-                      disabled={!accumulatedTranscript || loading}
-                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
-                        selectedBtn === "book"
-                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
-                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
-                      }`}
-                    >
-                      <BookOpenText className="mr-1" />
-                    </Button>
-                    <Button
+                      <BrushCleaning size={14} />
+                      <span>Clean</span>
+                    </button>
+                    <button
                       onClick={() => setSelectedBtn("enhance")}
                       disabled={!accumulatedTranscript || loading}
-                      className={`text-xs sm:text-sm md:text-[14px] h-8 sm:h-9 md:h-9 w-[50px] px-2 sm:px-3 md:px-4 rounded-[8px] transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
                         selectedBtn === "enhance"
-                          ? "bg-[#30c2a1] hover:bg-[#28a88c] border-2 border-[#30c2a1]"
-                          : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-2 border-transparent"
+                          ? "bg-[#30c2a1] text-white"
+                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                      } ${
+                        !accumulatedTranscript || loading
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
                       }`}
                     >
-                      <ArrowUpNarrowWide className="mr-1" />
-                    </Button>
+                      <ArrowUpNarrowWide size={14} />
+                      <span>Enhance</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedBtn("book")}
+                      disabled={!accumulatedTranscript || loading}
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium border-x-2 border-[#30c2a1] transition-all ${
+                        selectedBtn === "book"
+                          ? "bg-[#30c2a1] text-white"
+                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                      } ${
+                        !accumulatedTranscript || loading
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <BookOpenText size={14} />
+                      <span>Book</span>
+                    </button>
                   </div>
 
                   <div className="flex gap-1 w-full">
                     <Button
-                      className="mt-0 w-[160px] bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9  sm:px-4 md:px-6 rounded-[12px] font-medium"
+                      className="mt-0 w-full bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9  sm:px-4 md:px-6 rounded-[12px] font-medium"
                       onClick={() => {
                         handleFinalText();
                       }}
                       disabled={loading || !accumulatedTranscript}
                     >
-                      {loading ? <Spinner /> : <Send />}
+                      {loading ? <Spinner /> : <Sparkles />}
                       Generate
                     </Button>
                   </div>

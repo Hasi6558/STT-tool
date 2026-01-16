@@ -12,3 +12,7 @@ export const refineFinalTextRef: { current: string | null } = {
 export const refineCoreArgumentRef: { current: string | null } = {
   current: null,
 };
+
+export const pointsOutputRef: { current: string | null } = {
+  current: null,
+};

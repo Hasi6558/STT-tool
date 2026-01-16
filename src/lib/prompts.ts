@@ -6,15 +6,28 @@ Core argument provided by the user:
 {{CORE_ARGUMENT}}
 """
 
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
+
 Rules:
 - Preserve the original words, details, and meaning exactly.
 - Do NOT add, remove, or change any ideas.
 - Treat the core argument as contextual guidance only.
-- Do NOT strengthen, clarify, reinterpret, or modify the argument to better fit the text.
+- Do NOT strengthen, clarify, reinterpret, ors modify the argument to better fit the text.
 - Only fix grammar, punctuation, spacing, and sentence structure.
 - Correct typos and obvious errors.
 - Keep the sentence order and structure as close as possible to the original.
 - Do NOT reword, summarize, or change the style.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the cleaned-up text.\n
@@ -28,6 +41,15 @@ Core argument provided by the user:
 """
 {{CORE_ARGUMENT}}
 """
+
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
 
 Rules:
 - Preserve all original ideas and meaning.
@@ -46,6 +68,10 @@ Rules:
 - Avoid complex vocabulary or academic phrasing.
 - Use normal paragraphs only.
 - Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the enhanced text.
@@ -60,6 +86,15 @@ Core argument provided by the user:
 """
 {{CORE_ARGUMENT}}
 """
+
+Input structure clarification:
+- The input consists of multiple sections.
+- Each section has:
+  - a "heading" that describes the topic or context
+  - a "text" field that contains the actual content to process
+- Use the heading only to understand context and flow.
+- Apply all transformations ONLY to the text content.
+- Do NOT rewrite, repeat, or reference the headings in the output.
 
 Rules:
 - Preserve every single detail in the transcript, including minor observations, examples, numbers, names, and events.
@@ -78,39 +113,51 @@ Rules:
 - Use normal paragraphs only.
 - Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.
 - Do NOT use bold, italics, markdown, or special characters.
+- Treat headings as contextual guidance only.
+- Do NOT include headings, titles, or section labels in the output.
+- Do NOT output JSON or any structured format.
+- Combine all processed text into a single continuous plain-text output.
 - Output plain text only.
 
 Output only the rewritten book-style text.
 `;
 
 export const ExtractPointsPrompt = `
-You are an assistant helping a writer organize their spoken thoughts.
+You are an assistant helping a writer organize spoken thoughts.
 
-Your task is to analyze the following raw spoken transcript and organize it into structured writing points with headings.
+Your task is to lightly clean and organize a raw spoken transcript into structured writing points with headings.
 
-Rules:
+Rules (VERY IMPORTANT):
 - Do NOT rewrite into book style.
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
-- Do NOT remove any ideas or details.
-- Do NOT change the original words or the order of words in the transcript.
-- Do NOT decide what the main argument should be.
-- Preserve the speaker’s original intent and wording exactly.
+- Do NOT remove meaningful ideas or details.
+- Do NOT change the meaning or intent of any sentence.
+- Do NOT change the order of ideas.
+- Do NOT paraphrase or replace meaningful words.
+
+Allowed cleanup (ONLY these are allowed):
+- Fix punctuation (periods, commas, question marks).
+- Fix spacing and line breaks.
+- Remove spoken fillers and discourse markers that add no semantic value, such as:
+  "now", "okay", "so", "you see", "I mean", "kind of", "sort of",
+  "we're gonna", "what's happening", "still", repeated hesitation phrases.
+- Remove obvious speech-to-text artifacts and repeated words.
+- Split run-on text into sentences ONLY where clearly needed.
+- Do NOT rephrase sentences after cleaning.
 
 What to do:
-1. Identify distinct ideas or themes expressed by the speaker.
-2. Group related ideas together.
-3. For each group:
-   - Create a short, neutral heading that summarizes the theme.
-   - Keep all words exactly as in the original transcript.
-   - Place the original text under the heading without changing word order, punctuation, or phrasing.
-4. Use neutral language only for headings; the text must remain unchanged.
-5. Keep the content faithful to what was said, only organizing it under headings.
+1. Apply ONLY the allowed cleanup so the text becomes clear and readable.
+2. Identify distinct ideas or themes expressed by the speaker.
+3. Group related ideas together without reordering content.
+4. For each group:
+   - Create a short, neutral heading summarizing the theme.
+   - Place the cleaned original text under the heading.
 
 Output format rules:
 - Output valid JSON only.
-- Do NOT include any explanations or extra text.
-- Do NOT use markdown, symbols, or formatting.
+- Do NOT include explanations or extra text.
+- Do NOT use markdown or symbols.
 - The output must match this exact schema:
 
 [

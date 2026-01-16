@@ -10,7 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ArrowButton from "./ArrowButton";
 import { Spinner } from "./ui/spinner";
-import { pointsRef } from "@/lib/persistentRefs";
+import { pointsRef, pointsOutputRef } from "@/lib/persistentRefs";
 
 interface Point {
   heading: string;
@@ -21,12 +21,14 @@ interface PointSeparatorProps {
   isPointSeparatorOpen: boolean;
   accumulatedTranscript: string;
   setIsPointSeparatorOpen: (open: boolean) => void;
+  setPointsOutput: (output: string) => void;
 }
 
 const PointSeparator = ({
   isPointSeparatorOpen,
   setIsPointSeparatorOpen,
   accumulatedTranscript,
+  setPointsOutput,
 }: PointSeparatorProps) => {
   // lazy-init from shared ref so data survives unmount
   const [points, setPoints] = useState<Point[]>(() => pointsRef.current ?? []);
@@ -51,6 +53,11 @@ const PointSeparator = ({
       const parsed = JSON.parse(resultText);
       setPoints(parsed);
       pointsRef.current = parsed;
+
+      // Send the result to RefinePannel and persist it
+      setPointsOutput(resultText);
+      pointsOutputRef.current = resultText;
+
       setLoading(false);
     } catch (error) {
       setLoading(false);
