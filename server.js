@@ -4,6 +4,7 @@ import next from "next";
 import { WebSocketServer } from "ws";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 
 dotenv.config();
 
@@ -106,8 +107,8 @@ app.prepare().then(() => {
       console.log("Client connected to WebSocket server");
 
       let openaiWs = null;
-      let deepgramWs = null;
-      let currentMode = "classic";
+      let deepgramConnection = null;
+      let currentMode = null; // 'sentence' or 'realtime'
 
       clientWs.on("message", async (message) => {
         try {
@@ -115,12 +116,12 @@ app.prepare().then(() => {
 
           // Initialize transcription connection based on mode
           if (data.type === "init") {
-            currentMode = data.mode || "classic";
-            console.log(`Initializing in ${currentMode} mode`);
+            currentMode = data.mode || "sentence"; // Default to sentence mode
+            console.log(`Initializing ${currentMode} mode transcription`);
 
-            if (currentMode === "pro") {
-              // Pro mode: Use Deepgram Nova 3 for real-time streaming
-              const deepgramApiKey = process.env.DEEPGEAM_API_KEY;
+            if (currentMode === "realtime") {
+              // ===== DEEPGRAM REALTIME MODE =====
+              const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
 
               if (!deepgramApiKey) {
                 clientWs.send(
@@ -132,105 +133,118 @@ app.prepare().then(() => {
                 return;
               }
 
-              const WebSocket = (await import("ws")).default;
+              try {
+                const deepgram = createClient(deepgramApiKey);
 
-              // Connect to Deepgram with Nova 3 model
-              const deepgramUrl = new URL("wss://api.deepgram.com/v1/listen");
-              deepgramUrl.searchParams.append("model", "nova-3");
-              deepgramUrl.searchParams.append("language", "en");
-              deepgramUrl.searchParams.append("punctuate", "true");
-              deepgramUrl.searchParams.append("interim_results", "true");
-              deepgramUrl.searchParams.append("endpointing", "10"); // 300ms for fast real-time results
-              deepgramUrl.searchParams.append("encoding", "linear16");
-              deepgramUrl.searchParams.append("sample_rate", "24000");
-              deepgramUrl.searchParams.append("channels", "1");
-              deepgramUrl.searchParams.append("smart_format", "true");
-              deepgramUrl.searchParams.append("utterance_end_ms", "1000"); // 2 seconds silence to end utterance
+                deepgramConnection = deepgram.listen.live({
+                  model: "nova-3",
+                  language: "en",
+                  smart_format: true,
+                  interim_results: true,
+                  endpointing: 300, // Slightly longer endpointing for better sentence detection
+                  punctuate: true,
+                  encoding: "linear16",
+                  sample_rate: 24000,
+                  channels: 1,
+                });
 
-              deepgramWs = new WebSocket(deepgramUrl.toString(), {
-                headers: {
-                  Authorization: `Token ${deepgramApiKey}`,
-                },
-              });
+                deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
+                  console.log("Connected to Deepgram");
+                  clientWs.send(
+                    JSON.stringify({
+                      type: "ready",
+                      message: "Connected to Deepgram transcription service",
+                    })
+                  );
+                });
 
-              deepgramWs.on("open", () => {
-                console.log("Connected to Deepgram Nova 3");
-                clientWs.send(
-                  JSON.stringify({
-                    type: "ready",
-                    message: "Connected to Deepgram (Pro mode)",
-                  })
-                );
-              });
+                deepgramConnection.on(
+                  LiveTranscriptionEvents.Transcript,
+                  (transcriptData) => {
+                    if (transcriptData.channel?.alternatives?.[0]) {
+                      const transcript =
+                        transcriptData.channel.alternatives[0].transcript;
+                      const isFinal = transcriptData.is_final;
+                      const speechFinal = transcriptData.speech_final;
 
-              deepgramWs.on("message", (message) => {
-                try {
-                  const response = JSON.parse(message.toString());
-                  console.log("Deepgram response:", response.type);
+                      if (transcript) {
+                        console.log(
+                          `[Deepgram] ${
+                            isFinal ? "FINAL" : "Interim"
+                          }: ${transcript}`
+                        );
 
-                  if (response.type === "Results") {
-                    const transcript =
-                      response.channel?.alternatives?.[0]?.transcript;
-                    const isFinal = response.is_final;
-                    const speechFinal = response.speech_final;
-
-                    if (transcript) {
-                      // Send both interim and final results for real-time display
-                      clientWs.send(
-                        JSON.stringify({
-                          type: "deepgram_transcript",
-                          transcript: transcript,
-                          is_final: isFinal,
-                          speech_final: speechFinal,
-                        })
-                      );
-                      console.log(
-                        `${isFinal ? "[FINAL]" : "[INTERIM]"} ${transcript}`
-                      );
+                        // Send transcript to client
+                        clientWs.send(
+                          JSON.stringify({
+                            type: "deepgram_transcript",
+                            transcript: transcript,
+                            is_final: isFinal,
+                            speech_final: speechFinal,
+                          })
+                        );
+                      }
                     }
                   }
+                );
 
-                  if (response.type === "UtteranceEnd") {
-                    console.log("Utterance ended");
+                deepgramConnection.on(
+                  LiveTranscriptionEvents.SpeechStarted,
+                  () => {
+                    console.log("[Deepgram] Speech started");
+                    clientWs.send(
+                      JSON.stringify({
+                        type: "deepgram_speech_started",
+                      })
+                    );
+                  }
+                );
+
+                deepgramConnection.on(
+                  LiveTranscriptionEvents.UtteranceEnd,
+                  () => {
+                    console.log("[Deepgram] Utterance end");
                     clientWs.send(
                       JSON.stringify({
                         type: "deepgram_utterance_end",
                       })
                     );
                   }
+                );
 
-                  if (response.type === "Metadata") {
-                    console.log(
-                      "Deepgram session started:",
-                      response.request_id
+                deepgramConnection.on(LiveTranscriptionEvents.Close, () => {
+                  console.log("Deepgram connection closed");
+                  clientWs.send(
+                    JSON.stringify({
+                      type: "disconnected",
+                      message: "Deepgram transcription service disconnected",
+                    })
+                  );
+                });
+
+                deepgramConnection.on(
+                  LiveTranscriptionEvents.Error,
+                  (error) => {
+                    console.error("Deepgram error:", error);
+                    clientWs.send(
+                      JSON.stringify({
+                        type: "error",
+                        message: "Deepgram connection error",
+                      })
                     );
                   }
-                } catch (error) {
-                  console.error("Error parsing Deepgram message:", error);
-                }
-              });
-
-              deepgramWs.on("error", (error) => {
-                console.error("Deepgram WebSocket error:", error);
+                );
+              } catch (error) {
+                console.error("Error initializing Deepgram:", error);
                 clientWs.send(
                   JSON.stringify({
                     type: "error",
-                    message: "Deepgram connection error",
+                    message: "Failed to initialize Deepgram connection",
                   })
                 );
-              });
-
-              deepgramWs.on("close", () => {
-                console.log("Deepgram WebSocket closed");
-                clientWs.send(
-                  JSON.stringify({
-                    type: "disconnected",
-                    message: "Deepgram disconnected",
-                  })
-                );
-              });
+              }
             } else {
-              // Classic mode: Use OpenAI Realtime API
+              // ===== OPENAI SENTENCE MODE =====
               const apiKey = process.env.OPENAI_API_KEY;
 
               if (!apiKey) {
@@ -358,18 +372,18 @@ app.prepare().then(() => {
             }
           }
 
-          // Forward audio data based on mode
+          // Forward audio data based on current mode
           if (data.type === "audio") {
             if (
-              currentMode === "pro" &&
-              deepgramWs &&
-              deepgramWs.readyState === 1
+              currentMode === "realtime" &&
+              deepgramConnection &&
+              deepgramConnection.getReadyState() === 1
             ) {
-              // Deepgram expects raw audio bytes, not base64
+              // Deepgram expects raw audio buffer, not base64
               const audioBuffer = Buffer.from(data.audio, "base64");
-              deepgramWs.send(audioBuffer);
+              deepgramConnection.send(audioBuffer);
             } else if (
-              currentMode === "classic" &&
+              currentMode === "sentence" &&
               openaiWs &&
               openaiWs.readyState === 1
             ) {
@@ -384,14 +398,15 @@ app.prepare().then(() => {
 
           // Handle stop recording
           if (data.type === "stop") {
-            if (deepgramWs) {
-              deepgramWs.close();
-              deepgramWs = null;
-            }
             if (openaiWs) {
               openaiWs.close();
               openaiWs = null;
             }
+            if (deepgramConnection) {
+              deepgramConnection.finish();
+              deepgramConnection = null;
+            }
+            currentMode = null;
           }
         } catch (error) {
           console.error("Error handling client message:", error);
@@ -410,9 +425,9 @@ app.prepare().then(() => {
           openaiWs.close();
           openaiWs = null;
         }
-        if (deepgramWs) {
-          deepgramWs.close();
-          deepgramWs = null;
+        if (deepgramConnection) {
+          deepgramConnection.finish();
+          deepgramConnection = null;
         }
       });
 

@@ -11,17 +11,17 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowRight, ArrowRightFromLine, Mic, Text, Zap } from "lucide-react";
+  ArrowRight,
+  ArrowRightFromLine,
+  ChevronDown,
+  Mic,
+  Text,
+  Zap,
+} from "lucide-react";
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
 
-type TranscriptionMode = "classic" | "pro";
+type TranscriptionMode = "sentence" | "realtime";
 
 interface TextEditorProps {
   isMicSectionOpen: boolean;
@@ -40,7 +40,15 @@ export default function TextEditor({
   const [transcript, setTranscript] = useState<string>("");
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
-  const [mode, setMode] = useState<TranscriptionMode>("classic");
+  const [transcriptionMode, setTranscriptionMode] =
+    useState<TranscriptionMode>("sentence");
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [interimTranscript, setInterimTranscript] = useState<string>("");
+
+  // State for inline interim display in realtime mode
+  const [baseTextBefore, setBaseTextBefore] = useState<string>("");
+  const [baseTextAfter, setBaseTextAfter] = useState<string>("");
+  const [finalizedSessionText, setFinalizedSessionText] = useState<string>("");
 
   const cursorRef = useRef<number | null>(null);
 
@@ -63,16 +71,47 @@ export default function TextEditor({
     >
   >(new Map());
   const currentItemIdRef = useRef<string | null>(null);
+  const transcriptionModeRef = useRef<TranscriptionMode>("sentence");
+  const finalizedTextRef = useRef<string>(""); // Track finalized text for realtime mode
 
-  // Pro mode: track the current utterance for real-time display
-  const utteranceStartPosRef = useRef<number | null>(null); // Position where current utterance started
-  const currentUtteranceLenRef = useRef<number>(0); // Length of current utterance text in document
-  const finalizedTextRef = useRef<string>(""); // Text that has been finalized (won't change)
-  const recordingStartCursorRef = useRef<number | null>(null); // Cursor position when recording started
+  // Refs for tracking insertion point
+  const insertionPointRef = useRef<number>(0);
 
   useEffect(() => {
     textRef.current = accumulatedTranscript;
   }, [accumulatedTranscript]);
+
+  useEffect(() => {
+    transcriptionModeRef.current = transcriptionMode;
+  }, [transcriptionMode]);
+
+  // Sync accumulated transcript when finalized text changes in realtime mode
+  useEffect(() => {
+    if (transcriptionMode === "realtime" && isMicOn && finalizedSessionText) {
+      const completeText =
+        baseTextBefore + finalizedSessionText + baseTextAfter;
+      textRef.current = completeText;
+      setAccumulatedTranscript(completeText);
+
+      // Update cursor position
+      const newCursorPos = baseTextBefore.length + finalizedSessionText.length;
+      cursorRef.current = newCursorPos;
+
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart =
+            textareaRef.current.selectionEnd = newCursorPos;
+        }
+      });
+    }
+  }, [
+    finalizedSessionText,
+    baseTextBefore,
+    baseTextAfter,
+    transcriptionMode,
+    isMicOn,
+    setAccumulatedTranscript,
+  ]);
 
   useEffect(() => {
     // Check for microphone availability on component mount (guard for server and unsupported browsers)
@@ -201,6 +240,39 @@ export default function TextEditor({
     return orderedTexts.join(" ");
   };
 
+  // Function to update insertion point when cursor moves during realtime recording
+  const updateRealtimeInsertionPoint = (newCursorPos: number) => {
+    if (transcriptionModeRef.current !== "realtime" || !isMicOn) return;
+
+    // Build the current complete text from the current state
+    const currentCompleteText =
+      baseTextBefore + finalizedSessionText + baseTextAfter;
+
+    // Clamp cursor position to valid range
+    const clampedPos = Math.max(
+      0,
+      Math.min(newCursorPos, currentCompleteText.length)
+    );
+
+    // Re-split the text at the new cursor position
+    setBaseTextBefore(currentCompleteText.slice(0, clampedPos));
+    setBaseTextAfter(currentCompleteText.slice(clampedPos));
+    setFinalizedSessionText("");
+
+    // Update the ref
+    textRef.current = currentCompleteText;
+    setAccumulatedTranscript(currentCompleteText);
+
+    // Update cursor ref
+    cursorRef.current = clampedPos;
+    insertionPointRef.current = clampedPos;
+
+    // Clear any interim transcript since we're starting fresh at new position
+    setInterimTranscript("");
+
+    console.log(`[Realtime] Updated insertion point to ${clampedPos}`);
+  };
+
   const insertTextAtCursor = (text: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -232,28 +304,6 @@ export default function TextEditor({
     });
   };
 
-  // Pro mode: Insert text word-by-word without trailing space (for streaming)
-  const insertStreamingText = (text: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = cursorRef.current ?? textarea.value.length;
-    const fullText = textRef.current ?? "";
-
-    const newText = fullText.slice(0, start) + text + fullText.slice(start);
-
-    textRef.current = newText;
-    setAccumulatedTranscript(newText);
-
-    const newPos = start + text.length;
-    cursorRef.current = newPos;
-
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = newPos;
-    });
-  };
-
   const startRecording = async () => {
     try {
       setStatus("Initializing...");
@@ -261,15 +311,11 @@ export default function TextEditor({
       // Save cursor position before starting recording
       if (textareaRef.current) {
         cursorRef.current = textareaRef.current.selectionStart;
-        recordingStartCursorRef.current = textareaRef.current.selectionStart;
       }
 
       // Clear current session transcript items but keep accumulated transcript
       transcriptItemsRef.current.clear();
       currentItemIdRef.current = null;
-      utteranceStartPosRef.current = null;
-      currentUtteranceLenRef.current = 0;
-      finalizedTextRef.current = "";
       setTranscript("");
 
       // Request microphone access (guard for environments without mediaDevices)
@@ -316,8 +362,22 @@ export default function TextEditor({
         console.log("WebSocket connected");
         setStatus("Connecting to transcription service...");
 
-        // Initialize transcription session with mode
-        ws.send(JSON.stringify({ type: "init", mode }));
+        // Initialize transcription session with selected mode
+        ws.send(
+          JSON.stringify({ type: "init", mode: transcriptionModeRef.current })
+        );
+
+        // Reset finalized text tracker for realtime mode
+        if (transcriptionModeRef.current === "realtime") {
+          finalizedTextRef.current = "";
+          // Store the base text split at cursor for inline interim display
+          const currentText = textRef.current ?? "";
+          const insertPos = cursorRef.current ?? currentText.length;
+          insertionPointRef.current = insertPos;
+          setBaseTextBefore(currentText.slice(0, insertPos));
+          setBaseTextAfter(currentText.slice(insertPos));
+          setFinalizedSessionText("");
+        }
       };
 
       ws.onmessage = (event) => {
@@ -326,104 +386,9 @@ export default function TextEditor({
 
         switch (data.type) {
           case "ready":
-            setStatus(
-              mode === "pro"
-                ? "Recording\n(Realtime - Faster)..."
-                : "Recording\n(Sentence Transcription - Higher Quality)..."
-            );
+            setStatus("Recording...");
             break;
 
-          // Pro mode (Deepgram) events
-          case "deepgram_transcript":
-            if (data.transcript) {
-              const textarea = textareaRef.current;
-              if (!textarea) break;
-
-              // Initialize utterance start position if not set - use the saved recording start position
-              if (utteranceStartPosRef.current === null) {
-                utteranceStartPosRef.current =
-                  recordingStartCursorRef.current ??
-                  cursorRef.current ??
-                  textarea.value.length;
-              }
-
-              const startPos = utteranceStartPosRef.current;
-              const currentText = textRef.current ?? "";
-              const fullTranscript = data.transcript as string;
-
-              // CORRECT APPROACH: Deepgram sends FULL transcript each time for current utterance
-              // Simply replace the current utterance region with the new transcript
-              // This allows Deepgram to correct mistakes naturally
-
-              const beforeUtterance = currentText.slice(0, startPos);
-              const afterUtterance = currentText.slice(
-                startPos + currentUtteranceLenRef.current
-              );
-
-              // Build new text by replacing current utterance
-              const newText = beforeUtterance + fullTranscript + afterUtterance;
-
-              // Update everything
-              textRef.current = newText;
-              setAccumulatedTranscript(newText);
-              currentUtteranceLenRef.current = fullTranscript.length;
-
-              const newPos = startPos + fullTranscript.length;
-              cursorRef.current = newPos;
-
-              requestAnimationFrame(() => {
-                textarea.focus();
-                textarea.selectionStart = textarea.selectionEnd = newPos;
-              });
-
-              // If speech_final, finalize this utterance and prepare for next
-              if (data.speech_final) {
-                const currentPos = startPos + currentUtteranceLenRef.current;
-                // Add a space after the finalized utterance
-                const textWithSpace =
-                  textRef.current.slice(0, currentPos) +
-                  " " +
-                  textRef.current.slice(currentPos);
-                textRef.current = textWithSpace;
-                setAccumulatedTranscript(textWithSpace);
-
-                // Reset for next utterance
-                cursorRef.current = currentPos + 1;
-                currentUtteranceLenRef.current = 0;
-                utteranceStartPosRef.current = currentPos + 1;
-                finalizedTextRef.current = "";
-              }
-            }
-            break;
-
-          case "deepgram_utterance_end":
-            // Utterance ended - finalize current position and reset for next
-            if (currentUtteranceLenRef.current > 0) {
-              const startPos = utteranceStartPosRef.current ?? 0;
-              const endPos = startPos + currentUtteranceLenRef.current;
-              const currentText = textRef.current ?? "";
-
-              // Add space after utterance if needed
-              if (
-                endPos <= currentText.length &&
-                !currentText.slice(endPos).startsWith(" ")
-              ) {
-                const newText =
-                  currentText.slice(0, endPos) +
-                  " " +
-                  currentText.slice(endPos);
-                textRef.current = newText;
-                setAccumulatedTranscript(newText);
-                cursorRef.current = endPos + 1;
-              }
-            }
-            // Reset for next utterance
-            currentUtteranceLenRef.current = 0;
-            utteranceStartPosRef.current = cursorRef.current;
-            finalizedTextRef.current = "";
-            break;
-
-          // Classic mode (OpenAI) events
           case "input_audio_buffer.committed":
             // Speech chunk detected and committed
             // Track the item_id and previous_item_id for ordering
@@ -518,6 +483,44 @@ export default function TextEditor({
 
           case "disconnected":
             setStatus("Disconnected");
+            break;
+
+          // ===== DEEPGRAM REALTIME MODE EVENTS =====
+          case "deepgram_transcript":
+            if (data.is_final && data.transcript) {
+              // Final transcript - add to finalized session text
+              console.log("[Deepgram] Final transcript:", data.transcript);
+
+              // Use functional update to get latest state values
+              setFinalizedSessionText((prevFinalized) => {
+                const spacer = prevFinalized ? " " : "";
+                const newFinalized = prevFinalized + spacer + data.transcript;
+
+                // We need to update accumulated transcript in a separate effect
+                // For now, store in ref for immediate access
+                finalizedTextRef.current = newFinalized;
+
+                return newFinalized;
+              });
+
+              // Clear interim display
+              setInterimTranscript("");
+              setStatus("Recording...");
+            } else if (!data.is_final && data.transcript) {
+              // Interim transcript - show inline at cursor position
+              console.log("[Deepgram] Interim:", data.transcript);
+              setInterimTranscript(data.transcript);
+              setStatus("Listening...");
+            }
+            break;
+
+          case "deepgram_speech_started":
+            setStatus("Speech detected...");
+            break;
+
+          case "deepgram_utterance_end":
+            setInterimTranscript(""); // Clear interim on utterance end
+            setStatus("Recording...");
             break;
 
           default:
@@ -623,6 +626,14 @@ export default function TextEditor({
         wsRef.current.close();
         wsRef.current = null;
       }
+
+      // Clear interim transcript for realtime mode
+      setInterimTranscript("");
+
+      // Reset realtime mode state
+      setBaseTextBefore("");
+      setBaseTextAfter("");
+      setFinalizedSessionText("");
 
       if (transcript.trim()) {
         const currentFull = textareaRef.current
@@ -734,65 +745,82 @@ export default function TextEditor({
             </div>
             {/* Mode Toggle */}
             <div className="absolute right-4 top-4">
-              <Select
-                value={mode}
-                onValueChange={(value: string) =>
-                  setMode(value as TranscriptionMode)
-                }
-                disabled={isMicOn}
-              >
-                <SelectTrigger className="w-auto h-auto p-0 bg-transparent border-none text-white hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed font-medium gap-2 shadow-none focus:ring-0 focus:ring-offset-0">
-                  <SelectValue placeholder="Select mode">
-                    {mode === "classic" ? (
-                      <div className="flex flex-col items-start">
-                        <span className="text-sm font-semibold">
-                          Sentence Transcription
-                        </span>
-                        <span className="text-xs opacity-90">
-                          (Higher Quality)
-                        </span>
+              <div className="relative">
+                <button
+                  onClick={() => !isMicOn && setIsDropdownOpen(!isDropdownOpen)}
+                  disabled={isMicOn}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isMicOn
+                      ? "bg-white/20 text-white/60 cursor-not-allowed"
+                      : "bg-white/30 hover:bg-white/40 text-white cursor-pointer"
+                  }`}
+                >
+                  {transcriptionMode === "sentence" ? (
+                    <>
+                      <Text className="h-4 w-4" />
+                      Sentence Mode
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      RealTime Mode
+                    </>
+                  )}
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {isDropdownOpen && !isMicOn && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        setTranscriptionMode("sentence");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                        transcriptionMode === "sentence"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <Text className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Sentence Mode</div>
+                        <div className="text-xs text-gray-500">
+                          OpenAI GPT-4o
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-start">
-                        <span className="text-sm font-semibold">Realtime</span>
-                        <span className="text-xs opacity-90">(Faster)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTranscriptionMode("realtime");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                        transcriptionMode === "realtime"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <Zap className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">RealTime Mode</div>
+                        <div className="text-xs text-gray-500">
+                          Deepgram Nova 3
+                        </div>
                       </div>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  <SelectItem
-                    value="classic"
-                    className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50"
-                  >
-                    <div className="flex flex-col py-1">
-                      <span className="font-semibold text-gray-900">
-                        Sentence Transcription
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        (Higher Quality)
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem
-                    value="pro"
-                    className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50"
-                  >
-                    <div className="flex flex-col py-1">
-                      <span className="font-semibold text-gray-900">
-                        Realtime
-                      </span>
-                      <span className="text-xs text-gray-500">(Faster)</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300">
             <Textarea
               placeholder={
-                mode === "classic"
+                transcriptionMode === "sentence"
                   ? "No transcript yet. Click the microphone to start recording.\n(Sentence Transcription - Higher Quality)"
                   : "No transcript yet. Click the microphone to start recording.\n(Realtime - Faster)"
               }
@@ -805,20 +833,79 @@ export default function TextEditor({
                 scrollbarColor: "rgb(156 163 175) transparent",
               }}
               disabled={false}
-              value={accumulatedTranscript}
+              value={
+                // For realtime mode during recording, show interim text inline at cursor position
+                transcriptionMode === "realtime" && isMicOn && interimTranscript
+                  ? baseTextBefore +
+                    finalizedSessionText +
+                    (finalizedSessionText ? " " : "") +
+                    interimTranscript +
+                    baseTextAfter
+                  : accumulatedTranscript
+              }
               onChange={(e) => {
-                cursorRef.current = e.target.selectionStart;
-                setAccumulatedTranscript(e.target.value);
-                textRef.current = e.target.value;
+                const newPos = e.target.selectionStart;
+                cursorRef.current = newPos;
+
+                // If in realtime recording mode, we need to handle the change specially
+                if (transcriptionMode === "realtime" && isMicOn) {
+                  // Update the accumulated transcript and re-establish insertion point
+                  const newValue = e.target.value;
+                  textRef.current = newValue;
+                  setAccumulatedTranscript(newValue);
+
+                  // Re-split at cursor position
+                  setBaseTextBefore(newValue.slice(0, newPos));
+                  setBaseTextAfter(newValue.slice(newPos));
+                  setFinalizedSessionText("");
+                  setInterimTranscript("");
+                } else {
+                  setAccumulatedTranscript(e.target.value);
+                  textRef.current = e.target.value;
+                }
               }}
               onClick={() => {
                 if (textareaRef.current) {
-                  cursorRef.current = textareaRef.current.selectionStart;
+                  const newPos = textareaRef.current.selectionStart;
+                  cursorRef.current = newPos;
+
+                  // Update insertion point if in realtime recording mode
+                  if (transcriptionMode === "realtime" && isMicOn) {
+                    // Use setTimeout to ensure we get the position after the click is processed
+                    setTimeout(() => {
+                      if (textareaRef.current) {
+                        updateRealtimeInsertionPoint(
+                          textareaRef.current.selectionStart
+                        );
+                      }
+                    }, 0);
+                  }
                 }
               }}
-              onKeyUp={() => {
+              onKeyUp={(e) => {
                 if (textareaRef.current) {
-                  cursorRef.current = textareaRef.current.selectionStart;
+                  const newPos = textareaRef.current.selectionStart;
+                  cursorRef.current = newPos;
+
+                  // Update insertion point if in realtime recording mode and navigation key pressed
+                  const navigationKeys = [
+                    "Enter",
+                    "ArrowUp",
+                    "ArrowDown",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "Home",
+                    "End",
+                    "PageUp",
+                    "PageDown",
+                  ];
+                  if (
+                    transcriptionMode === "realtime" &&
+                    isMicOn &&
+                    navigationKeys.includes(e.key)
+                  ) {
+                    updateRealtimeInsertionPoint(newPos);
+                  }
                 }
               }}
             />
