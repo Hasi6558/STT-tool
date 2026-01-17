@@ -14,10 +14,10 @@ export interface ModificationbarRef {
   exportToPDF: () => void;
 }
 async function transform(
-  type: "clean" | "enhance" | "book",
+  type: "enhance" | "book",
   text: string,
   setLoading: (value: boolean) => void,
-  setModifiedText: (value: ModificationPromptResponse) => void
+  setModifiedText: (value: ModificationPromptResponse) => void,
 ): Promise<void> {
   try {
     setLoading(true);
@@ -82,9 +82,6 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
       },
     }));
 
-    const handleCleanUpBtnClick = async (text: string) => {
-      await transform("clean", text, setLoading, setModifiedText);
-    };
     const handleBookBtnClick = async (text: string) => {
       await transform("book", text, setLoading, setModifiedText);
     };
@@ -98,27 +95,9 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
           <CardHeader className="flex flex-wrap items-center border-b border-gray-300 justify-start pb-2 sm:pb-4  gap-2 sm:gap-3">
             <div
               className={`p-1 border-[3px] rounded-xl transition-all ${
-                selectedBtn === "clean"
-                  ? "border-[#30c2a1]"
-                  : "border-transparent"
-              } ${!accumulatedTranscript ? "opacity-50" : ""}`}
-            >
-              <Button
-                onClick={() => {
-                  handleCleanUpBtnClick(accumulatedTranscript);
-                  setSelectedBtn("clean");
-                }}
-                disabled={!accumulatedTranscript}
-                className="bg-[#30c2a1] hover:bg-[#28a88c] text-xs sm:text-sm md:text-md h-9 sm:h-10 md:h-11 min-w-[90px] sm:min-w-[100px] md:min-w-[110px] px-3 sm:px-4 md:px-6"
-              >
-                Clean Up
-              </Button>
-            </div>
-            <div
-              className={`p-1 border-[3px] rounded-xl transition-all ${
-                selectedBtn === "enhance"
-                  ? "border-[#30c2a1]"
-                  : "border-transparent"
+                selectedBtn === "enhance" ? "border-[#30c2a1]" : (
+                  "border-transparent"
+                )
               } ${!accumulatedTranscript ? "opacity-50" : ""}`}
             >
               <Button
@@ -135,9 +114,9 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
 
             <div
               className={`p-1 border-[3px] rounded-xl transition-all ${
-                selectedBtn === "book"
-                  ? "border-[#30c2a1]"
-                  : "border-transparent"
+                selectedBtn === "book" ? "border-[#30c2a1]" : (
+                  "border-transparent"
+                )
               } ${!accumulatedTranscript ? "opacity-50" : ""}`}
             >
               <Button
@@ -154,13 +133,15 @@ const Modificationbar = forwardRef<ModificationbarRef, ModificationbarProps>(
           </CardHeader>
           <CardContent className="flex items-center border-gray-300 justify-center pb-2 sm:pb-4">
             <div className="bg-[#f3f4f6] w-full h-[57vh] sm:h-[55vh] md:h-[46vh] lg:h-[56vh] p-2 sm:p-4 md:p-6 rounded-md overflow-auto whitespace-pre-wrap !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg">
-              {loading ? <Spinner /> : <span>{modifiedText.result}</span>}
+              {loading ?
+                <Spinner />
+              : <span>{modifiedText.result}</span>}
             </div>
           </CardContent>
         </Card>
       </div>
     );
-  }
+  },
 );
 Modificationbar.displayName = "Modificationbar";
 export default Modificationbar;

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: prompt },
         { role: "user", content: text },
       ],
-      max_tokens: 8000,
+      max_tokens: 10000,
     });
 
     // Calculate approximate tokens for prompt + input + output and log an estimated cost

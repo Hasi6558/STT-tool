@@ -2,7 +2,6 @@ import {
   ArrowLeftFromLine,
   ArrowUpNarrowWide,
   BookOpenText,
-  BrushCleaning,
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -26,12 +25,12 @@ const RefinePannel = ({
   isRefinePannelOpen,
   setIsRefinePannelOpen,
 }: RefinePannelProps): JSX.Element => {
-  const [selectedBtn, setSelectedBtn] = useState<string>("clean");
+  const [selectedBtn, setSelectedBtn] = useState<string>("enhance");
   const [coreArgument, setCoreArgument] = useState<string>(
-    () => refineCoreArgumentRef.current ?? ""
+    () => refineCoreArgumentRef.current ?? "",
   );
   const [finalText, setFinalText] = useState<string>(
-    () => refineFinalTextRef.current ?? ""
+    () => refineFinalTextRef.current ?? "",
   );
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -95,7 +94,7 @@ const RefinePannel = ({
       textarea::-webkit-scrollbar-thumb { background-color: rgb(156 163 175); border-radius: 3px; }
       textarea::-webkit-scrollbar-track { background: transparent; }
     `}</style>
-      {isRefinePannelOpen ? (
+      {isRefinePannelOpen ?
         <Card
           className={`h-full gap-0 ${
             !isRefinePannelOpen ? "hover:bg-gray-100 " : ""
@@ -131,32 +130,16 @@ const RefinePannel = ({
                 <div className="flex flex-col items-start gap-1 ml-3 mr-2 py-1">
                   <div className="flex rounded-lg border-2 border-[#30c2a1] overflow-hidden bg-gray-200">
                     <button
-                      onClick={() => setSelectedBtn("clean")}
-                      disabled={!accumulatedTranscript || loading}
-                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
-                        selectedBtn === "clean"
-                          ? "bg-[#30c2a1] text-white"
-                          : "bg-transparent text-gray-700 hover:bg-gray-300"
-                      } ${
-                        !accumulatedTranscript || loading
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      <BrushCleaning size={14} />
-                      <span>Clean</span>
-                    </button>
-                    <button
                       onClick={() => setSelectedBtn("enhance")}
                       disabled={!accumulatedTranscript || loading}
                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
-                        selectedBtn === "enhance"
-                          ? "bg-[#30c2a1] text-white"
-                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                        selectedBtn === "enhance" ?
+                          "bg-[#30c2a1] text-white"
+                        : "bg-transparent text-gray-700 hover:bg-gray-300"
                       } ${
-                        !accumulatedTranscript || loading
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
+                        !accumulatedTranscript || loading ?
+                          "opacity-50 cursor-not-allowed"
+                        : ""
                       }`}
                     >
                       <ArrowUpNarrowWide size={14} />
@@ -165,14 +148,14 @@ const RefinePannel = ({
                     <button
                       onClick={() => setSelectedBtn("book")}
                       disabled={!accumulatedTranscript || loading}
-                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium border-x-2 border-[#30c2a1] transition-all ${
-                        selectedBtn === "book"
-                          ? "bg-[#30c2a1] text-white"
-                          : "bg-transparent text-gray-700 hover:bg-gray-300"
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
+                        selectedBtn === "book" ?
+                          "bg-[#30c2a1] text-white"
+                        : "bg-transparent text-gray-700 hover:bg-gray-300"
                       } ${
-                        !accumulatedTranscript || loading
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
+                        !accumulatedTranscript || loading ?
+                          "opacity-50 cursor-not-allowed"
+                        : ""
                       }`}
                     >
                       <BookOpenText size={14} />
@@ -188,7 +171,9 @@ const RefinePannel = ({
                       }}
                       disabled={loading || !accumulatedTranscript}
                     >
-                      {loading ? <Spinner /> : <Sparkles />}
+                      {loading ?
+                        <Spinner />
+                      : <Sparkles />}
                       Generate
                     </Button>
                   </div>
@@ -198,18 +183,15 @@ const RefinePannel = ({
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar border-gray-300">
             <Card className="w-full min-h-full p-4 shadow-none rounded-lg border-2">
-              {loading ? (
+              {loading ?
                 <div className="flex items-center justify-center h-full">
                   <Spinner />
                 </div>
-              ) : (
-                <div className="whitespace-pre-wrap">{finalText}</div>
-              )}
+              : <div className="whitespace-pre-wrap">{finalText}</div>}
             </Card>
           </CardContent>
         </Card>
-      ) : (
-        <div className="group h-full flex flex-col justify-center items-center overflow-hidden">
+      : <div className="group h-full flex flex-col justify-center items-center overflow-hidden">
           <ArrowLeftFromLine
             className="text-gray-500 text-[10px] "
             onClick={() => {
@@ -219,7 +201,7 @@ const RefinePannel = ({
             }}
           />
         </div>
-      )}
+      }
     </div>
   );
 };

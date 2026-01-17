@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Handlebars from "handlebars";
 import OpenAI from "openai";
-import { CleanUpPrompt, EnhancePrompt, BookPrompt } from "@/lib/prompts";
+import {
+  ExtractPointsPrompt,
+  FinalBasePrompt,
+  EnhanceStylePrompt,
+  BookStylePrompt,
+} from "@/lib/prompts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -12,11 +16,19 @@ const CORS_HEADERS = {
 export function OPTIONS() {
   return NextResponse.json(null, { status: 204, headers: CORS_HEADERS });
 }
+
+// Types for the two-stage pipeline
 interface TransformRequestBody {
   text?: string;
-  type?: string;
+  type?: "enhance" | "book";
   coreArgument?: string;
 }
+
+interface ExtractedPoint {
+  heading: string;
+  text: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: TransformRequestBody = await req.json();
@@ -25,71 +37,118 @@ export async function POST(req: NextRequest) {
     if (!text || !type) {
       return NextResponse.json(
         { error: "Missing text or type" },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
-    const userInputText = text ? text : "";
-    let currentCoreArgument = "N/A";
-    if (coreArgument) {
-      currentCoreArgument = coreArgument;
-    }
-    let prompt = "";
-    switch (type) {
-      case "clean":
-        const cleanTemplate = Handlebars.compile(CleanUpPrompt);
-        prompt += cleanTemplate({ currentCoreArgument });
-        break;
-      case "enhance":
-        const enhanceTemplate = Handlebars.compile(EnhancePrompt);
-        prompt += enhanceTemplate({ currentCoreArgument });
-        break;
-      case "book":
-        const bookTemplate = Handlebars.compile(BookPrompt);
-        prompt += bookTemplate({ currentCoreArgument });
-        break;
-      default: {
-        return NextResponse.json(
-          { error: "Invalid type" },
-          { status: 400, headers: CORS_HEADERS }
-        );
-      }
+    // Validate type - only "enhance" and "book" are allowed
+    if (type !== "enhance" && type !== "book") {
+      return NextResponse.json(
+        { error: "Invalid type. Only 'enhance' or 'book' are supported." },
+        { status: 400, headers: CORS_HEADERS },
+      );
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "OPENAI_API_KEY not set" },
-        { status: 500, headers: CORS_HEADERS }
+        { status: 500, headers: CORS_HEADERS },
       );
     }
 
     const client = new OpenAI({ apiKey });
 
-    const completion = await client.chat.completions.create({
+    // ========================================
+    // STAGE 2: Extract points from raw transcript
+    // ========================================
+    console.info("[transform] Starting Stage 2: ExtractPointsPrompt");
+
+    const stage2Completion = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: userInputText },
+        { role: "system", content: ExtractPointsPrompt },
+        { role: "user", content: text },
       ],
+      max_tokens: 8000,
     });
 
+    const stage2Output = stage2Completion.choices[0]?.message?.content ?? "";
+
+    // Parse the JSON output from Stage 2
+    let extractedPoints: ExtractedPoint[];
+    try {
+      extractedPoints = JSON.parse(stage2Output) as ExtractedPoint[];
+      if (!Array.isArray(extractedPoints)) {
+        throw new Error("Stage 2 output is not an array");
+      }
+    } catch (parseError) {
+      console.error(
+        "[transform] Failed to parse Stage 2 JSON output:",
+        parseError,
+      );
+      console.error("[transform] Raw Stage 2 output:", stage2Output);
+      return NextResponse.json(
+        { error: "Failed to parse extracted points from Stage 2" },
+        { status: 500, headers: CORS_HEADERS },
+      );
+    }
+
+    console.info(
+      `[transform] Stage 2 complete: extracted ${extractedPoints.length} points`,
+    );
+
+    // ========================================
+    // STAGE 3: Apply final style transformation
+    // ========================================
+    console.info(
+      `[transform] Starting Stage 3: FinalBasePrompt + ${type} style`,
+    );
+
+    // Build the Stage 3 prompt
+    const currentCoreArgument = coreArgument || "N/A";
+    const basePromptWithArg = FinalBasePrompt.replace(
+      "{{CORE_ARGUMENT}}",
+      currentCoreArgument,
+    );
+
+    // Select the style prompt
+    const stylePrompt =
+      type === "enhance" ? EnhanceStylePrompt : BookStylePrompt;
+    const stage3SystemPrompt = basePromptWithArg + "\n\n" + stylePrompt;
+
+    // Format the extracted points as input for Stage 3
+    const stage3UserInput = JSON.stringify(extractedPoints, null, 2);
+
+    const stage3Completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: stage3SystemPrompt },
+        { role: "user", content: stage3UserInput },
+      ],
+      max_tokens: 10000,
+    });
+
+    const finalResult = stage3Completion.choices[0]?.message?.content ?? "";
+
+    console.info("[transform] Stage 3 complete: final transformation done");
+
     return NextResponse.json(
-      { result: completion.choices[0].message.content },
-      { status: 200, headers: CORS_HEADERS }
+      { result: finalResult },
+      { status: 200, headers: CORS_HEADERS },
     );
   } catch (err) {
     // Log the error on the server for debugging
     console.error("/api/transform error:", err);
 
     const safeMessage =
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : String((err as Error)?.message ?? err);
+      process.env.NODE_ENV === "production" ?
+        "Internal server error"
+      : String((err as Error)?.message ?? err);
 
     return NextResponse.json(
       { error: safeMessage },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
