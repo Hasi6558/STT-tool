@@ -15,13 +15,13 @@ import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
 
 interface RefinePannelProps {
-  accumulatedTranscript: string;
+  accumulatedTranscript: string; // This is actually the JSON output from Stage 2 (pointsOutput)
   isRefinePannelOpen: boolean;
   setIsRefinePannelOpen: (open: boolean) => void;
 }
 
 const RefinePannel = ({
-  accumulatedTranscript,
+  accumulatedTranscript, // JSON string from Stage 2
   isRefinePannelOpen,
   setIsRefinePannelOpen,
 }: RefinePannelProps): JSX.Element => {
@@ -46,7 +46,7 @@ const RefinePannel = ({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          text: accumulatedTranscript,
+          extractedPointsJson: accumulatedTranscript, // Send pre-extracted JSON from Stage 2
           type: selectedBtn,
           coreArgument: coreArgument,
         }),
@@ -66,6 +66,10 @@ const RefinePannel = ({
       setLoading(false);
     }
   }, [coreArgument, selectedBtn, accumulatedTranscript, loading]);
+
+  // Check if we have extracted points (JSON from Stage 2)
+  const hasExtractedPoints =
+    accumulatedTranscript && accumulatedTranscript.trim().length > 0;
 
   return (
     <div className="h-full">
@@ -131,13 +135,13 @@ const RefinePannel = ({
                   <div className="flex rounded-lg border-2 border-[#30c2a1] overflow-hidden bg-gray-200">
                     <button
                       onClick={() => setSelectedBtn("enhance")}
-                      disabled={!accumulatedTranscript || loading}
+                      disabled={!hasExtractedPoints || loading}
                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
                         selectedBtn === "enhance" ?
                           "bg-[#30c2a1] text-white"
                         : "bg-transparent text-gray-700 hover:bg-gray-300"
                       } ${
-                        !accumulatedTranscript || loading ?
+                        !hasExtractedPoints || loading ?
                           "opacity-50 cursor-not-allowed"
                         : ""
                       }`}
@@ -147,13 +151,13 @@ const RefinePannel = ({
                     </button>
                     <button
                       onClick={() => setSelectedBtn("book")}
-                      disabled={!accumulatedTranscript || loading}
+                      disabled={!hasExtractedPoints || loading}
                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
                         selectedBtn === "book" ?
                           "bg-[#30c2a1] text-white"
                         : "bg-transparent text-gray-700 hover:bg-gray-300"
                       } ${
-                        !accumulatedTranscript || loading ?
+                        !hasExtractedPoints || loading ?
                           "opacity-50 cursor-not-allowed"
                         : ""
                       }`}
@@ -169,7 +173,7 @@ const RefinePannel = ({
                       onClick={() => {
                         handleFinalText();
                       }}
-                      disabled={loading || !accumulatedTranscript}
+                      disabled={loading || !hasExtractedPoints}
                     >
                       {loading ?
                         <Spinner />

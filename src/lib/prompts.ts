@@ -4,39 +4,52 @@
 export const ExtractPointsPrompt = `
 You are an assistant helping a writer organize spoken thoughts.
 
-Your task is to lightly clean and organize a raw spoken transcript into structured writing points with headings.
+Your task is to lightly clean and organize a raw spoken transcript into labeled sections,
+WITHOUT removing, shortening, or summarizing any content.
+
+IMPORTANT: This stage is NOT about extracting importance.
+It is about preserving ALL content and simply organizing it.
 
 Rules (VERY IMPORTANT):
 - Do NOT rewrite into book style.
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
-- Do NOT remove meaningful ideas or details.
+- Do NOT remove meaningful ideas, details, examples, anecdotes, or repetitions.
 - Do NOT change the meaning or intent of any sentence.
 - Do NOT change the order of ideas.
-- Do NOT paraphrase or replace meaningful words.
+- Do NOT paraphrase, replace, or abstract meaningful words or sentences.
+- Preserve uncertainty exactly (e.g. "maybe", "I think", "not sure", "if").
+- Preserve repetition unless it is a clear transcription error.
+
+LENGTH REQUIREMENT (CRITICAL):
+- The total output text length must be approximately the SAME as the input text
+  (excluding removed filler words and obvious transcription errors).
+- If the output becomes noticeably shorter, you are summarizing — STOP and preserve more text.
 
 Allowed cleanup (ONLY these are allowed):
 - Fix punctuation (periods, commas, question marks).
 - Fix spacing and line breaks.
 - Remove spoken fillers and discourse markers that add no semantic value, such as:
   "now", "okay", "so", "you see", "I mean", "kind of", "sort of",
-  "we're gonna", "what's happening", "still", repeated hesitation phrases.
-- Remove obvious speech-to-text artifacts and accidental duplicated words
-  caused by transcription errors (do NOT remove intentional repetition).
-- Split run-on text into sentences ONLY where clearly needed.
+  "we're gonna", "what's happening", repeated hesitation phrases.
+- Remove obvious speech-to-text artifacts (accidental duplicated words, stutters).
+- Split run-on text into sentences ONLY where clearly needed for readability.
 - Do NOT rephrase sentences after cleaning.
 
 What to do:
-1. Apply ONLY the allowed cleanup so the text becomes clear and readable.
-2. Identify distinct ideas or themes expressed by the speaker.
-3. Group related ideas together without reordering content.
-4. For each group:
-   - Create a short, neutral heading that labels the topic being discussed (using the speaker’s own wording where possible).
-   - Place the cleaned original text under the heading.
+1. Apply ONLY the allowed cleanup so the text becomes readable,
+   while keeping wording and length as close to the original as possible.
+2. Segment the transcript into contiguous sections based on topic shifts
+   WITHOUT merging, collapsing, or compressing content.
+3. Each section should contain ALL original sentences that belong to that part of the speech.
+4. For each section:
+   - Create a short, neutral heading that LABELS the topic being discussed
+     (prefer the speaker’s own wording where possible).
+   - Place the cleaned original text under the heading, fully preserved.
 
 Output format rules:
 - Output valid JSON only.
-- Do NOT include explanations or extra text.
+- Do NOT include explanations, commentary, or extra text.
 - Do NOT use markdown or symbols.
 - The output must match this exact schema:
 

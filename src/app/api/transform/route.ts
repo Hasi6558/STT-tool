@@ -22,6 +22,7 @@ interface TransformRequestBody {
   text?: string;
   type?: "enhance" | "book";
   coreArgument?: string;
+  extractedPointsJson?: string; // Optional: JSON string from Stage 2 to skip re-extraction
 }
 
 interface ExtractedPoint {
@@ -32,11 +33,11 @@ interface ExtractedPoint {
 export async function POST(req: NextRequest) {
   try {
     const body: TransformRequestBody = await req.json();
-    const { text, type, coreArgument } = body ?? {};
+    const { text, type, coreArgument, extractedPointsJson } = body ?? {};
 
-    if (!text || !type) {
+    if (!type) {
       return NextResponse.json(
-        { error: "Missing text or type" },
+        { error: "Missing type" },
         { status: 400, headers: CORS_HEADERS },
       );
     }
@@ -60,43 +61,78 @@ export async function POST(req: NextRequest) {
     const client = new OpenAI({ apiKey });
 
     // ========================================
-    // STAGE 2: Extract points from raw transcript
+    // STAGE 2: Extract points from raw transcript (if not already provided)
     // ========================================
-    console.info("[transform] Starting Stage 2: ExtractPointsPrompt");
-
-    const stage2Completion = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: ExtractPointsPrompt },
-        { role: "user", content: text },
-      ],
-      max_tokens: 8000,
-    });
-
-    const stage2Output = stage2Completion.choices[0]?.message?.content ?? "";
-
-    // Parse the JSON output from Stage 2
     let extractedPoints: ExtractedPoint[];
-    try {
-      extractedPoints = JSON.parse(stage2Output) as ExtractedPoint[];
-      if (!Array.isArray(extractedPoints)) {
-        throw new Error("Stage 2 output is not an array");
+
+    if (extractedPointsJson) {
+      // Stage 2 already completed - use the provided JSON
+      console.info("[transform] Using pre-extracted points from Stage 2");
+      try {
+        extractedPoints = JSON.parse(extractedPointsJson) as ExtractedPoint[];
+        if (!Array.isArray(extractedPoints)) {
+          throw new Error("Provided extractedPointsJson is not an array");
+        }
+        console.info(
+          `[transform] Loaded ${extractedPoints.length} pre-extracted points`,
+        );
+      } catch (parseError) {
+        console.error(
+          "[transform] Failed to parse provided extractedPointsJson:",
+          parseError,
+        );
+        return NextResponse.json(
+          { error: "Invalid extractedPointsJson format" },
+          { status: 400, headers: CORS_HEADERS },
+        );
       }
-    } catch (parseError) {
-      console.error(
-        "[transform] Failed to parse Stage 2 JSON output:",
-        parseError,
-      );
-      console.error("[transform] Raw Stage 2 output:", stage2Output);
-      return NextResponse.json(
-        { error: "Failed to parse extracted points from Stage 2" },
-        { status: 500, headers: CORS_HEADERS },
+    } else {
+      // No pre-extracted points - run Stage 2 now
+      if (!text) {
+        return NextResponse.json(
+          {
+            error:
+              "Missing text (raw transcript required when extractedPointsJson not provided)",
+          },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+
+      console.info("[transform] Starting Stage 2: ExtractPointsPrompt");
+
+      const stage2Completion = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: ExtractPointsPrompt },
+          { role: "user", content: text },
+        ],
+        max_tokens: 8000,
+      });
+
+      const stage2Output = stage2Completion.choices[0]?.message?.content ?? "";
+
+      // Parse the JSON output from Stage 2
+      try {
+        extractedPoints = JSON.parse(stage2Output) as ExtractedPoint[];
+        if (!Array.isArray(extractedPoints)) {
+          throw new Error("Stage 2 output is not an array");
+        }
+      } catch (parseError) {
+        console.error(
+          "[transform] Failed to parse Stage 2 JSON output:",
+          parseError,
+        );
+        console.error("[transform] Raw Stage 2 output:", stage2Output);
+        return NextResponse.json(
+          { error: "Failed to parse extracted points from Stage 2" },
+          { status: 500, headers: CORS_HEADERS },
+        );
+      }
+
+      console.info(
+        `[transform] Stage 2 complete: extracted ${extractedPoints.length} points`,
       );
     }
-
-    console.info(
-      `[transform] Stage 2 complete: extracted ${extractedPoints.length} points`,
-    );
 
     // ========================================
     // STAGE 3: Apply final style transformation
