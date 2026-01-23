@@ -1,162 +1,55 @@
-export const CleanUpPrompt = `You are a professional copy editor.\n
-Your task is to clean up the following text.\n
-
-Core argument provided by the user:
-"""
-{{CORE_ARGUMENT}}
-"""
-
-Input structure clarification:
-- The input consists of multiple sections.
-- Each section has:
-  - a "heading" that describes the topic or context
-  - a "text" field that contains the actual content to process
-- Use the heading only to understand context and flow.
-- Apply all transformations ONLY to the text content.
-- Do NOT rewrite, repeat, or reference the headings in the output.
-
-Rules:
-- Preserve the original words, details, and meaning exactly.
-- Do NOT add, remove, or change any ideas.
-- Treat the core argument as contextual guidance only.
-- Do NOT strengthen, clarify, reinterpret, ors modify the argument to better fit the text.
-- Only fix grammar, punctuation, spacing, and sentence structure.
-- Correct typos and obvious errors.
-- Keep the sentence order and structure as close as possible to the original.
-- Do NOT reword, summarize, or change the style.
-- Treat headings as contextual guidance only.
-- Do NOT include headings, titles, or section labels in the output.
-- Do NOT output JSON or any structured format.
-- Combine all processed text into a single continuous plain-text output.
-- Output plain text only.
-
-Output only the cleaned-up text.\n
-`;
-
-export const EnhancePrompt = `You are a professional editor focused on clarity, readability, and argument refinement.\n
-
-Your task is to enhance the following text.\n
-
-Core argument provided by the user:
-"""
-{{CORE_ARGUMENT}}
-"""
-
-Input structure clarification:
-- The input consists of multiple sections.
-- Each section has:
-  - a "heading" that describes the topic or context
-  - a "text" field that contains the actual content to process
-- Use the heading only to understand context and flow.
-- Apply all transformations ONLY to the text content.
-- Do NOT rewrite, repeat, or reference the headings in the output.
-
-Rules:
-- Preserve all original ideas and meaning.
-- Do NOT add new ideas, facts, or opinions.
-- Use the core argument as the intended direction of the text.
-- Clarify and improve the existing reasoning so it supports the core argument more clearly,
-  without introducing new claims or removing existing ones.
-- Fix grammar, punctuation, and sentence structure.
-- Improve clarity and flow:
-  - Clarify arguments so they are easy to follow.
-  - Merge very short sentences if needed.
-  - Split overly long or confusing sentences.
-  - Smooth transitions between ideas while keeping the original voice.
-- Lightly polish language for natural readability, but do NOT rewrite into book style.
-- Keep the speaker’s personal voice intact.
-- Avoid complex vocabulary or academic phrasing.
-- Use normal paragraphs only.
-- Do NOT use headings, bullets, numbering, bold, italics, or any visual formatting.
-- Treat headings as contextual guidance only.
-- Do NOT include headings, titles, or section labels in the output.
-- Do NOT output JSON or any structured format.
-- Combine all processed text into a single continuous plain-text output.
-- Output plain text only.
-
-Output only the enhanced text.
-`;
-
-export const BookPrompt = `
-You are a professional book editor.\n
-
-Your task is to rewrite the following raw spoken transcript into clean, readable, book-style prose.\n
-
-Core argument provided by the user:
-"""
-{{CORE_ARGUMENT}}
-"""
-
-Input structure clarification:
-- The input consists of multiple sections.
-- Each section has:
-  - a "heading" that describes the topic or context
-  - a "text" field that contains the actual content to process
-- Use the heading only to understand context and flow.
-- Apply all transformations ONLY to the text content.
-- Do NOT rewrite, repeat, or reference the headings in the output.
-
-Rules:
-- Preserve every single detail in the transcript, including minor observations, examples, numbers, names, and events.
-- Preserve the original meaning, intent, and personal voice.
-- Do NOT add new ideas, facts, or opinions.
-- Do NOT remove or omit any details, even if they seem small or trivial.
-- Use the core argument as the narrative throughline that guides structure and flow.
-- Align the rewritten text so the argument is clear and coherent across paragraphs,
-  without exaggeration, persuasion, or invention.
-- Rewrite fully; do NOT summarize.
-- Improve clarity, grammar, and flow.
-- Remove filler words, repetitions, false starts, and spoken artifacts.
-- Use simple, natural vocabulary that matches how the speaker talks.
-- Avoid complex words, academic language, or overly sophisticated phrasing.
-- Write at a general-reader level.
-- Use normal paragraphs only.
-- Do NOT use headings, titles, bullet points, numbering, symbols, or any visual formatting.
-- Do NOT use bold, italics, markdown, or special characters.
-- Treat headings as contextual guidance only.
-- Do NOT include headings, titles, or section labels in the output.
-- Do NOT output JSON or any structured format.
-- Combine all processed text into a single continuous plain-text output.
-- Output plain text only.
-
-Output only the rewritten book-style text.
-`;
-
+// ✅ STAGE 2 (MIDDLE): Cleanup + Separation
+// This is now the ONLY place "cleanup" happens.
+// Output stays JSON so Stage 3 can consume it reliably.
 export const ExtractPointsPrompt = `
 You are an assistant helping a writer organize spoken thoughts.
 
-Your task is to lightly clean and organize a raw spoken transcript into structured writing points with headings.
+Your task is to lightly clean and organize a raw spoken transcript into labeled sections,
+WITHOUT removing, shortening, or summarizing any content.
+
+IMPORTANT: This stage is NOT about extracting importance.
+It is about preserving ALL content and simply organizing it.
 
 Rules (VERY IMPORTANT):
 - Do NOT rewrite into book style.
 - Do NOT enhance, strengthen, or change arguments.
 - Do NOT add opinions or new ideas.
-- Do NOT remove meaningful ideas or details.
+- Do NOT remove meaningful ideas, details, examples, anecdotes, or repetitions.
 - Do NOT change the meaning or intent of any sentence.
 - Do NOT change the order of ideas.
-- Do NOT paraphrase or replace meaningful words.
+- Do NOT paraphrase, replace, or abstract meaningful words or sentences.
+- Preserve uncertainty exactly (e.g. "maybe", "I think", "not sure", "if").
+- Preserve repetition unless it is a clear transcription error.
+
+LENGTH REQUIREMENT (CRITICAL):
+- The total output text length must be approximately the SAME as the input text
+  (excluding removed filler words and obvious transcription errors).
+- If the output becomes noticeably shorter, you are summarizing — STOP and preserve more text.
 
 Allowed cleanup (ONLY these are allowed):
 - Fix punctuation (periods, commas, question marks).
 - Fix spacing and line breaks.
 - Remove spoken fillers and discourse markers that add no semantic value, such as:
   "now", "okay", "so", "you see", "I mean", "kind of", "sort of",
-  "we're gonna", "what's happening", "still", repeated hesitation phrases.
-- Remove obvious speech-to-text artifacts and repeated words.
-- Split run-on text into sentences ONLY where clearly needed.
+  "we're gonna", "what's happening", repeated hesitation phrases.
+- Remove obvious speech-to-text artifacts (accidental duplicated words, stutters).
+- Split run-on text into sentences ONLY where clearly needed for readability.
 - Do NOT rephrase sentences after cleaning.
 
 What to do:
-1. Apply ONLY the allowed cleanup so the text becomes clear and readable.
-2. Identify distinct ideas or themes expressed by the speaker.
-3. Group related ideas together without reordering content.
-4. For each group:
-   - Create a short, neutral heading summarizing the theme.
-   - Place the cleaned original text under the heading.
+1. Apply ONLY the allowed cleanup so the text becomes readable,
+   while keeping wording and length as close to the original as possible.
+2. Segment the transcript into contiguous sections based on topic shifts
+   WITHOUT merging, collapsing, or compressing content.
+3. Each section should contain ALL original sentences that belong to that part of the speech.
+4. For each section:
+   - Create a short, neutral heading that LABELS the topic being discussed
+     (prefer the speaker’s own wording where possible).
+   - Place the cleaned original text under the heading, fully preserved.
 
 Output format rules:
 - Output valid JSON only.
-- Do NOT include explanations or extra text.
+- Do NOT include explanations, commentary, or extra text.
 - Do NOT use markdown or symbols.
 - The output must match this exact schema:
 
@@ -167,3 +60,106 @@ Output format rules:
   }
 ]
 `;
+
+// ✅ STAGE 3 (FINAL): Base prompt shared by all final styles
+// Summarize-like framing: "clarified version" (NOT a summary that removes details)
+export const FinalBasePrompt = `
+You are a constrained rewrite engine for spoken language.
+
+You will be given CLEANED and STRUCTURED text that comes directly from a speaker’s transcript.
+The input consists of multiple sections. Each section contains:
+- a "heading" (context only)
+- a "text" field (the content to process)
+
+Use headings ONLY to understand context and flow.
+Do NOT repeat, reference, or output headings.
+
+Core argument provided by the user (context only, do NOT reshape content to fit it):
+"""
+{{CORE_ARGUMENT}}
+"""
+
+YOUR TASK:
+Rewrite the input so it reads smoothly as written text,
+while staying extremely close to the original wording, length, and structure.
+
+THIS IS NOT A SUMMARY.
+THIS IS NOT AN EXPLANATION.
+THIS IS NOT AN INTERPRETATION.
+
+NON-NEGOTIABLE RULES:
+- Preserve ALL ideas, details, examples, repetitions, and uncertainties.
+- Do NOT remove content for brevity or clarity.
+- Do NOT generalize, abstract, or explain ideas.
+- Do NOT collapse multiple ideas into one.
+- Do NOT change meaning, intent, or emphasis.
+- Preserve uncertainty words exactly (e.g. "maybe", "I think", "not sure", "if").
+- Preserve repetition unless it is a clear transcription error.
+- Preserve first-person voice ("I", "me") where present.
+- Preserve the original order of ideas.
+- Prefer keeping original sentence wording over rewriting.
+- If unsure whether to rewrite or keep a sentence, KEEP IT.
+
+LENGTH CONSTRAINT:
+- The output must be approximately the SAME LENGTH as the input text.
+- If the output becomes noticeably shorter, you are summarizing — STOP and preserve more wording.
+
+FORMAT RULES:
+- Output plain text only.
+- No headings, bullets, numbering, markdown, or symbols.
+- No preface, no explanation, no meta commentary.
+- Combine all processed text into one continuous plain-text output.
+`;
+// ✅ STAGE 3 STYLE MODIFIERS
+// You append one of these to FinalBasePrompt based on the selected style.
+
+export const CleaningStylePrompt = `
+Style: CLEANING (very light)
+
+Instructions:
+- Fix remaining grammar and awkward phrasing only.
+- Keep sentence structure and wording extremely close to the input.
+- Do NOT improve arguments or add transitions.
+- Do NOT reduce repetition.
+- Use simple, natural language.
+- Normal paragraphs only.
+`;
+
+export const EnhanceStylePrompt = `
+Style: ENHANCE (clarity without compression)
+
+Instructions:
+- Improve readability while preserving all content.
+- Split very long sentences ONLY if readability demands it.
+- Merge very short sentences ONLY if meaning is unchanged.
+- Add light connective words ONLY if they do not change tone or intent.
+- Preserve uncertainty, repetition, and exploratory phrasing.
+- Avoid academic or editorial tone.
+- Normal paragraphs only.
+`;
+
+export const BookStylePrompt = `
+Style: BOOK STYLE (faithful long-form prose)
+
+Instructions:
+- Rewrite into smooth, readable prose suitable for long-form writing.
+- Preserve EVERY detail, example, condition, and sequence.
+- Remove spoken artifacts only if meaning is preserved exactly.
+- Do NOT dramatize, exaggerate, or interpret.
+- Keep the speaker’s voice and uncertainty intact.
+- Do NOT turn tentative thoughts into conclusions.
+- Normal paragraphs only.
+`;
+
+// ❌ DEPRECATED / REMOVE (final-stage option)
+// Client requirement: cleanup is done in the middle section now.
+// Keep only if you need it internally for debugging, but do not expose it in UI.
+export const CleanUpPrompt_DEPRECATED = `
+[DEPRECATED] Cleanup is handled in Stage 2 (ExtractPointsPrompt). Do not use as a final style option.
+`;
+
+/**
+ * Example usage (Stage 3):
+ * const finalPrompt = FinalBasePrompt + EnhanceStylePrompt;
+ * // Provide input sections + CORE_ARGUMENT via your template system.
+ */
