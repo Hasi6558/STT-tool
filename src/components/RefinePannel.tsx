@@ -12,7 +12,7 @@ import {
 } from "@/lib/persistentRefs";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { Spinner } from "./ui/spinner";
+import Spin from "antd/es/spin";
 
 interface RefinePannelProps {
   accumulatedTranscript: string; // This is actually the JSON output from Stage 2 (pointsOutput)
@@ -100,7 +100,7 @@ const RefinePannel = ({
     `}</style>
       {isRefinePannelOpen ?
         <Card
-          className={`h-full gap-0 ${
+          className={` gap-0  h-[calc(100vh-3.5rem)] ${
             !isRefinePannelOpen ? "hover:bg-gray-100 " : ""
           }`}
           onClick={() => {
@@ -109,90 +109,96 @@ const RefinePannel = ({
             }
           }}
         >
-          <CardHeader className="relative border-b-1 ">
-            <div>
-              <div className="flex justify-start items-center mb-0 gap-2">
-                <div className="flex items-center gap-2 text-2xl   ">
+          <CardHeader className="relative border-b-1 py-2 z-10 bg-white">
+            <div className="flex w-full justify-between items-center">
+              <div className="flex flex-col mr-1">
+                <div className="flex items-center gap-2 text-xl   ">
                   <Sparkles className="text-[#30c2a1]" size={20} />
                   <h2 className="font-bold  mr-2">Refine Argument</h2>
                 </div>
-
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-md font-semibold uppercase tracking-wide">
-                  Stage 3
-                </span>
+                <div>
+                  <span className="inline-flex items-center mt-1 gap-1.5 px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-md font-semibold uppercase tracking-wide">
+                    Stage 3
+                  </span>
+                </div>
               </div>
 
-              <div className="flex w-full justify-between items-center">
-                <div className="flex-1">
-                  <Textarea
-                    className="resize-y h-15 !w-full "
-                    placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
-                    onChange={(e) => handleTextChange(e.target.value)}
-                  />
+              <div className="w-[300px] h-[80px] flex items-center">
+                <Textarea
+                  className="resize-none !w-full h-full overflow-y-auto overflow-x-hidden break-words whitespace-normal"
+                  placeholder="e.g., Technology is the best place to create change because it is both effective and efficient"
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  value={coreArgument}
+                />
+              </div>
+
+              <div className="flex flex-col items-start gap-1 ml-3 mr-2 py-1">
+                <div className="flex rounded-lg border-2 border-[#30c2a1] overflow-hidden bg-gray-200">
+                  <button
+                    onClick={() => setSelectedBtn("enhance")}
+                    disabled={!hasExtractedPoints || loading}
+                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
+                      selectedBtn === "enhance" ?
+                        "bg-[#30c2a1] text-white"
+                      : "bg-transparent text-gray-700 hover:bg-gray-300"
+                    } ${
+                      !hasExtractedPoints || loading ?
+                        "opacity-50 cursor-not-allowed"
+                      : ""
+                    }`}
+                  >
+                    <ArrowUpNarrowWide size={14} />
+                    <span>Enhance</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedBtn("book")}
+                    disabled={!hasExtractedPoints || loading}
+                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
+                      selectedBtn === "book" ?
+                        "bg-[#30c2a1] text-white"
+                      : "bg-transparent text-gray-700 hover:bg-gray-300"
+                    } ${
+                      !hasExtractedPoints || loading ?
+                        "opacity-50 cursor-not-allowed"
+                      : ""
+                    }`}
+                  >
+                    <BookOpenText size={14} />
+                    <span>Book</span>
+                  </button>
                 </div>
 
-                <div className="flex flex-col items-start gap-1 ml-3 mr-2 py-1">
-                  <div className="flex rounded-lg border-2 border-[#30c2a1] overflow-hidden bg-gray-200">
-                    <button
-                      onClick={() => setSelectedBtn("enhance")}
-                      disabled={!hasExtractedPoints || loading}
-                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
-                        selectedBtn === "enhance" ?
-                          "bg-[#30c2a1] text-white"
-                        : "bg-transparent text-gray-700 hover:bg-gray-300"
-                      } ${
-                        !hasExtractedPoints || loading ?
-                          "opacity-50 cursor-not-allowed"
-                        : ""
-                      }`}
-                    >
-                      <ArrowUpNarrowWide size={14} />
-                      <span>Enhance</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedBtn("book")}
-                      disabled={!hasExtractedPoints || loading}
-                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm font-medium transition-all ${
-                        selectedBtn === "book" ?
-                          "bg-[#30c2a1] text-white"
-                        : "bg-transparent text-gray-700 hover:bg-gray-300"
-                      } ${
-                        !hasExtractedPoints || loading ?
-                          "opacity-50 cursor-not-allowed"
-                        : ""
-                      }`}
-                    >
-                      <BookOpenText size={14} />
-                      <span>Book</span>
-                    </button>
-                  </div>
-
-                  <div className="flex gap-1 w-full">
-                    <Button
-                      className="mt-0 w-full bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9  sm:px-4 md:px-6 rounded-[12px] font-medium"
-                      onClick={() => {
-                        handleFinalText();
-                      }}
-                      disabled={loading || !hasExtractedPoints}
-                    >
-                      {loading ?
-                        <Spinner />
-                      : <Sparkles />}
-                      Generate
-                    </Button>
-                  </div>
+                <div className="flex gap-1 w-full">
+                  <Button
+                    className="mt-0 w-full bg-[#7039ee] hover:bg-[#5706b3] text-sm sm:text-md md:text-[16px] h-9 sm:h-11 md:h-9  sm:px-4 md:px-6 rounded-[12px] font-medium"
+                    onClick={() => {
+                      handleFinalText();
+                    }}
+                    disabled={loading || !hasExtractedPoints}
+                  >
+                    {loading ?
+                      <Spin size="small" className="text-[#30c2a1]" />
+                    : <Sparkles />}
+                    Generate
+                  </Button>
                 </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar border-gray-300">
-            <Card className="w-full min-h-full p-4 shadow-none rounded-lg border-2">
+          <CardContent className="flex-1 !px-8 min-h-0 pb-0">
+            <div
+              className="w-full h-[calc(100vh-10.1rem)] bg-white px-4 py-2  overflow-auto custom-scrollbar"
+              style={{
+                boxShadow:
+                  "-6px 0 10px rgba(0,0,0,0.15), 6px 0 10px rgba(0,0,0,0.15)",
+              }}
+            >
               {loading ?
                 <div className="flex items-center justify-center h-full">
-                  <Spinner />
+                  <Spin className="text-[#30c2a1]" />
                 </div>
               : <div className="whitespace-pre-wrap">{finalText}</div>}
-            </Card>
+            </div>
           </CardContent>
         </Card>
       : <div className="group h-full flex flex-col justify-center items-center overflow-hidden">

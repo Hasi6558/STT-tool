@@ -28,6 +28,7 @@ interface TextEditorProps {
   setIsMicSectionOpen: (value: boolean) => void;
   accumulatedTranscript: string;
   setAccumulatedTranscript: (value: string) => void;
+  hideRightBorder?: boolean;
 }
 
 export default function TextEditor({
@@ -57,7 +58,7 @@ export default function TextEditor({
   const wsRef = useRef<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<{ stop: () => void; state: string } | null>(
-    null
+    null,
   );
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -129,7 +130,7 @@ export default function TextEditor({
 
         const devices = await navigator.mediaDevices.enumerateDevices();
         const hasMicrophone = devices.some(
-          (device) => device.kind === "audioinput"
+          (device) => device.kind === "audioinput",
         );
         setIsMicConnected(hasMicrophone);
       } catch (error) {
@@ -153,7 +154,7 @@ export default function TextEditor({
       ) {
         navigator.mediaDevices.addEventListener(
           "devicechange",
-          handleDeviceChange
+          handleDeviceChange,
         );
 
         return () => {
@@ -161,7 +162,7 @@ export default function TextEditor({
           try {
             navigator.mediaDevices.removeEventListener(
               "devicechange",
-              handleDeviceChange
+              handleDeviceChange,
             );
           } catch (e) {
             // ignore
@@ -251,7 +252,7 @@ export default function TextEditor({
     // Clamp cursor position to valid range
     const clampedPos = Math.max(
       0,
-      Math.min(newCursorPos, currentCompleteText.length)
+      Math.min(newCursorPos, currentCompleteText.length),
     );
 
     // Re-split the text at the new cursor position
@@ -360,11 +361,11 @@ export default function TextEditor({
 
       ws.onopen = () => {
         console.log("WebSocket connected");
-        setStatus("Connecting to transcription service...");
+        setStatus("Connecting to\ntranscription service...");
 
         // Initialize transcription session with selected mode
         ws.send(
-          JSON.stringify({ type: "init", mode: transcriptionModeRef.current })
+          JSON.stringify({ type: "init", mode: transcriptionModeRef.current }),
         );
 
         // Reset finalized text tracker for realtime mode
@@ -399,7 +400,7 @@ export default function TextEditor({
                 previousItemId: data.previous_item_id || null,
               });
               console.log(
-                `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`
+                `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`,
               );
             }
             setStatus("Processing speech...");
@@ -448,7 +449,7 @@ export default function TextEditor({
                   if (content.type === "input_audio" && content.transcript) {
                     console.log(
                       "Found transcript in item.created:",
-                      content.transcript
+                      content.transcript,
                     );
                     const item = transcriptItemsRef.current.get(itemId);
                     if (item) {
@@ -570,7 +571,7 @@ export default function TextEditor({
           for (let i = 0; i < uint8Array.length; i += chunkSize) {
             binary += String.fromCharCode.apply(
               null,
-              Array.from(uint8Array.subarray(i, i + chunkSize))
+              Array.from(uint8Array.subarray(i, i + chunkSize)),
             );
           }
           const base64Audio = btoa(binary);
@@ -580,7 +581,7 @@ export default function TextEditor({
             JSON.stringify({
               type: "audio",
               audio: base64Audio,
-            })
+            }),
           );
         }
       };
@@ -599,7 +600,7 @@ export default function TextEditor({
     } catch (error) {
       console.error("Error starting recording:", error);
       setStatus(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
       setIsMicOn(false);
     }
@@ -636,9 +637,10 @@ export default function TextEditor({
       setFinalizedSessionText("");
 
       if (transcript.trim()) {
-        const currentFull = textareaRef.current
-          ? textareaRef.current.value
-          : textRef.current ?? accumulatedTranscript ?? "";
+        const currentFull =
+          textareaRef.current ?
+            textareaRef.current.value
+          : (textRef.current ?? accumulatedTranscript ?? "");
         const before = currentFull.slice(0, cursorRef.current ?? 0);
         const after = currentFull.slice(cursorRef.current ?? 0);
         const newTranscript =
@@ -668,7 +670,7 @@ export default function TextEditor({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col">
       <style>{`
       textarea::-webkit-scrollbar {
         width: 8px;
@@ -691,22 +693,33 @@ export default function TextEditor({
       }
     `}</style>
 
-      {isMicSectionOpen ? (
-        <Card
-          className={`relative w-full h-full shadow-none pt-0 overflow-hidden flex flex-col ${
-            !isMicSectionOpen ? "hover:bg-gray-100 " : ""
+      <Card
+        className={`relative w-full pt-0 flex flex-col h-full ${
+          !isMicSectionOpen ? "hover:bg-gray-100 " : ""
+        }`}
+      >
+        <CardHeader
+          className={`relative flex items-center border-b-4 py-3 rounded-none pt-2 justify-center transition-colors flex-shrink-0 ${
+            isMicOn && isMicConnected ?
+              "border-green-600 bg-green-500"
+            : "border-red-600 bg-red-400"
           }`}
         >
-          <CardHeader
-            className={`relative flex items-center border-b-4 rounded-xl pt-6 justify-center transition-colors flex-shrink-0 ${
-              isMicOn && isMicConnected
-                ? "border-green-600 bg-green-500"
-                : "border-red-600 bg-red-400"
-            }`}
-          >
-            <div>
-              <div className="flex flex-col justify-center items-center">
-                <div className="relative mb-2">
+          <div className="flex w-full justify-between items-center">
+            <div className="">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-md font-semibold uppercase tracking-wide ${
+                  isMicOn && isMicConnected ?
+                    "bg-green-100 text-green-600"
+                  : "bg-red-100 text-red-600"
+                }`}
+              >
+                Stage 1
+              </span>
+            </div>
+            <div className="flex justify-center items-center">
+              <div className="flex justify-center items-center gap-2">
+                <div className="relative flex-shrink-0">
                   {isMicOn && isMicConnected && (
                     <>
                       <span className="absolute inset-0 rounded-full bg-white/30 animate-[breathe_2s_ease-in-out_infinite]"></span>
@@ -715,57 +728,48 @@ export default function TextEditor({
                   )}
                   <Button
                     className={`${
-                      isMicOn && isMicConnected
-                        ? "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                        : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
-                    } h-[50px] w-[50px] rounded-full relative z-10 transition-colors`}
+                      isMicOn && isMicConnected ?
+                        "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                      : "bg-white/20 hover:bg-white/30 border-2 border-white/50"
+                    } h-[30px] my-2 w-[50px] rounded-full relative z-10 transition-colors`}
                     onClick={handleToggleRecording}
                   >
                     <FontAwesomeIcon
-                      className=" text-white"
+                      className="text-white"
                       icon={
                         isMicOn ? faMicrophoneLines : faMicrophoneLinesSlash
                       }
                     />
                   </Button>
                 </div>
-                <span className="text-white mb-4">{status}</span>
+                <span className="text-white whitespace-pre-line text-left min-w-[180px]">
+                  {status}
+                </span>
               </div>
             </div>
-            <div className="absolute left-4 top-4">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-md font-semibold uppercase tracking-wide ${
-                  isMicOn && isMicConnected
-                    ? "bg-green-100 text-green-600"
-                    : "bg-red-100 text-red-600"
-                }`}
-              >
-                Stage 1
-              </span>
-            </div>
+
             {/* Mode Toggle */}
-            <div className="absolute right-4 top-4">
+            <div className=" right-4 top-4">
               <div className="relative">
                 <button
                   onClick={() => !isMicOn && setIsDropdownOpen(!isDropdownOpen)}
                   disabled={isMicOn}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isMicOn
-                      ? "bg-white/20 text-white/60 cursor-not-allowed"
-                      : "bg-white/30 hover:bg-white/40 text-white cursor-pointer"
+                    isMicOn ?
+                      "bg-white/20 text-white/60 cursor-not-allowed"
+                    : "bg-white/30 hover:bg-white/40 text-white cursor-pointer"
                   }`}
                 >
-                  {transcriptionMode === "sentence" ? (
+                  {transcriptionMode === "sentence" ?
                     <>
                       <Text className="h-4 w-4" />
                       Sentence Mode
                     </>
-                  ) : (
-                    <>
+                  : <>
                       <Zap className="h-4 w-4" />
                       RealTime Mode
                     </>
-                  )}
+                  }
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${
                       isDropdownOpen ? "rotate-180" : ""
@@ -773,16 +777,16 @@ export default function TextEditor({
                   />
                 </button>
                 {isDropdownOpen && !isMicOn && (
-                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded border border-gray-300 overflow-hidden z-50">
                     <button
                       onClick={() => {
                         setTranscriptionMode("sentence");
                         setIsDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "sentence"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-700"
+                        transcriptionMode === "sentence" ?
+                          "bg-green-50 text-green-700"
+                        : "text-gray-700"
                       }`}
                     >
                       <Text className="h-4 w-4" />
@@ -799,9 +803,9 @@ export default function TextEditor({
                         setIsDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "realtime"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-700"
+                        transcriptionMode === "realtime" ?
+                          "bg-green-50 text-green-700"
+                        : "text-gray-700"
                       }`}
                     >
                       <Zap className="h-4 w-4" />
@@ -816,113 +820,104 @@ export default function TextEditor({
                 )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="relative px-4 py-1 flex flex-col items-center justify-center transition-all duration-300">
-            <Textarea
-              placeholder={
-                transcriptionMode === "sentence"
-                  ? "No transcript yet. Click the microphone to start recording.\n(Sentence Transcription - Higher Quality)"
-                  : "No transcript yet. Click the microphone to start recording.\n(Realtime - Faster)"
+          </div>
+        </CardHeader>
+        <CardContent className="relative px-8 pt-0 pb-0 flex flex-col items-center justify-start transition-all duration-300">
+          <Textarea
+            placeholder={
+              transcriptionMode === "sentence" ?
+                "No transcript yet. Click the microphone to start recording.\n(Sentence Transcription - Higher Quality)"
+              : "No transcript yet. Click the microphone to start recording.\n(Realtime - Faster)"
+            }
+            ref={textareaRef}
+            className={
+              "w-full h-[calc(100vh-8rem)] mx-[20px] rounded-none !outline-none px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black resize-y !field-sizing-normal border-0 focus-visible:ring-0 bg-white overflow-y-auto custom-scrollbar"
+            }
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgb(156 163 175) transparent",
+              boxShadow:
+                "-6px 0 10px rgba(0,0,0,0.15), 6px 0 10px rgba(0,0,0,0.15)",
+            }}
+            disabled={false}
+            value={
+              // For realtime mode during recording, show interim text inline at cursor position
+              transcriptionMode === "realtime" && isMicOn && interimTranscript ?
+                baseTextBefore +
+                finalizedSessionText +
+                (finalizedSessionText ? " " : "") +
+                interimTranscript +
+                baseTextAfter
+              : accumulatedTranscript
+            }
+            onChange={(e) => {
+              const newPos = e.target.selectionStart;
+              cursorRef.current = newPos;
+
+              // If in realtime recording mode, we need to handle the change specially
+              if (transcriptionMode === "realtime" && isMicOn) {
+                // Update the accumulated transcript and re-establish insertion point
+                const newValue = e.target.value;
+                textRef.current = newValue;
+                setAccumulatedTranscript(newValue);
+
+                // Re-split at cursor position
+                setBaseTextBefore(newValue.slice(0, newPos));
+                setBaseTextAfter(newValue.slice(newPos));
+                setFinalizedSessionText("");
+                setInterimTranscript("");
+              } else {
+                setAccumulatedTranscript(e.target.value);
+                textRef.current = e.target.value;
               }
-              ref={textareaRef}
-              className={
-                "h-[400px] w-full px-2 sm:px-4 !text-base !sm:!text-lg !md:!text-lg !lg:!text-lg caret-black hover:caret-black border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#30c2a1] resize-y focus:border-[#30c2a1] overflow-y-auto !field-sizing-normal"
-              }
-              style={{
-                scrollbarWidth: "thin",
-                scrollbarColor: "rgb(156 163 175) transparent",
-              }}
-              disabled={false}
-              value={
-                // For realtime mode during recording, show interim text inline at cursor position
-                transcriptionMode === "realtime" && isMicOn && interimTranscript
-                  ? baseTextBefore +
-                    finalizedSessionText +
-                    (finalizedSessionText ? " " : "") +
-                    interimTranscript +
-                    baseTextAfter
-                  : accumulatedTranscript
-              }
-              onChange={(e) => {
-                const newPos = e.target.selectionStart;
+            }}
+            onClick={() => {
+              if (textareaRef.current) {
+                const newPos = textareaRef.current.selectionStart;
                 cursorRef.current = newPos;
 
-                // If in realtime recording mode, we need to handle the change specially
+                // Update insertion point if in realtime recording mode
                 if (transcriptionMode === "realtime" && isMicOn) {
-                  // Update the accumulated transcript and re-establish insertion point
-                  const newValue = e.target.value;
-                  textRef.current = newValue;
-                  setAccumulatedTranscript(newValue);
-
-                  // Re-split at cursor position
-                  setBaseTextBefore(newValue.slice(0, newPos));
-                  setBaseTextAfter(newValue.slice(newPos));
-                  setFinalizedSessionText("");
-                  setInterimTranscript("");
-                } else {
-                  setAccumulatedTranscript(e.target.value);
-                  textRef.current = e.target.value;
+                  // Use setTimeout to ensure we get the position after the click is processed
+                  setTimeout(() => {
+                    if (textareaRef.current) {
+                      updateRealtimeInsertionPoint(
+                        textareaRef.current.selectionStart,
+                      );
+                    }
+                  }, 0);
                 }
-              }}
-              onClick={() => {
-                if (textareaRef.current) {
-                  const newPos = textareaRef.current.selectionStart;
-                  cursorRef.current = newPos;
+              }
+            }}
+            onKeyUp={(e) => {
+              if (textareaRef.current) {
+                const newPos = textareaRef.current.selectionStart;
+                cursorRef.current = newPos;
 
-                  // Update insertion point if in realtime recording mode
-                  if (transcriptionMode === "realtime" && isMicOn) {
-                    // Use setTimeout to ensure we get the position after the click is processed
-                    setTimeout(() => {
-                      if (textareaRef.current) {
-                        updateRealtimeInsertionPoint(
-                          textareaRef.current.selectionStart
-                        );
-                      }
-                    }, 0);
-                  }
+                // Update insertion point if in realtime recording mode and navigation key pressed
+                const navigationKeys = [
+                  "Enter",
+                  "ArrowUp",
+                  "ArrowDown",
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "Home",
+                  "End",
+                  "PageUp",
+                  "PageDown",
+                ];
+                if (
+                  transcriptionMode === "realtime" &&
+                  isMicOn &&
+                  navigationKeys.includes(e.key)
+                ) {
+                  updateRealtimeInsertionPoint(newPos);
                 }
-              }}
-              onKeyUp={(e) => {
-                if (textareaRef.current) {
-                  const newPos = textareaRef.current.selectionStart;
-                  cursorRef.current = newPos;
-
-                  // Update insertion point if in realtime recording mode and navigation key pressed
-                  const navigationKeys = [
-                    "Enter",
-                    "ArrowUp",
-                    "ArrowDown",
-                    "ArrowLeft",
-                    "ArrowRight",
-                    "Home",
-                    "End",
-                    "PageUp",
-                    "PageDown",
-                  ];
-                  if (
-                    transcriptionMode === "realtime" &&
-                    isMicOn &&
-                    navigationKeys.includes(e.key)
-                  ) {
-                    updateRealtimeInsertionPoint(newPos);
-                  }
-                }
-              }}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="h-full flex items-center justify-center overflow-hidden">
-          <ArrowRightFromLine
-            className="text-gray-500 text-[10px] "
-            onClick={() => {
-              if (!isMicSectionOpen) {
-                setIsMicSectionOpen(true);
               }
             }}
           />
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: stage3SystemPrompt },
         { role: "user", content: stage3UserInput },
       ],
-      max_tokens: 10000,
+      max_tokens: 15000,
     });
 
     const finalResult = stage3Completion.choices[0]?.message?.content ?? "";

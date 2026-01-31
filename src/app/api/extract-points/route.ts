@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { ExtractPointsPrompt } from "@/lib/prompts";
+import {
+  Stage2A_CleanupOnlyPrompt,
+  Stage2B_SegmentOnlyPrompt,
+} from "@/lib/prompts";
 
 // Approximate token / cost helpers -------------------------------------------------
 // Heuristic: use both word-count and average chars-per-token (4 chars/token) and
@@ -44,8 +47,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { text } = body ?? {};
 
-    const prompt = ExtractPointsPrompt;
-
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -56,32 +57,120 @@ export async function POST(req: NextRequest) {
 
     const client = new OpenAI({ apiKey });
 
-    const completion = await client.chat.completions.create({
+    // ============================================================
+    // STAGE 2A: Cleanup ONLY (verbatim preservation, plain text)
+    // ============================================================
+    console.info("[Stage 2A] Starting cleanup-only pass...");
+    const stage2A_completion = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: prompt },
+        { role: "system", content: Stage2A_CleanupOnlyPrompt },
         { role: "user", content: text },
       ],
-      max_tokens: 10000,
+      max_tokens: 15000,
     });
 
-    // Calculate approximate tokens for prompt + input + output and log an estimated cost
+    const cleanedText = stage2A_completion.choices?.[0]?.message?.content ?? "";
+    console.log("[Stage 2A] Cleaned text length:", cleanedText.length);
+    console.log(
+      "[Stage 2A] Cleaned text preview:",
+      cleanedText.substring(0, 200) + "...",
+    );
+
+    // Log token/cost estimate for Stage 2A
     try {
-      const outputText = completion.choices?.[0]?.message?.content ?? "";
-      const promptTokens = approxTokenCount(prompt);
+      const promptTokens = approxTokenCount(Stage2A_CleanupOnlyPrompt);
       const inputTokens = approxTokenCount(text ?? "");
-      const outputTokens = approxTokenCount(outputText);
+      const outputTokens = approxTokenCount(cleanedText);
       const totalTokens = promptTokens + inputTokens + outputTokens;
       const approxUsd = estimateCostUsd("gpt-4o", totalTokens);
       console.info(
-        `[token-estimate] model=gpt-4o tokens=${totalTokens} (prompt=${promptTokens} input=${inputTokens} output=${outputTokens}) approx_cost_usd=${approxUsd.toFixed(6)}`,
+        `[Stage 2A token-estimate] model=gpt-4o tokens=${totalTokens} (prompt=${promptTokens} input=${inputTokens} output=${outputTokens}) approx_cost_usd=${approxUsd.toFixed(6)}`,
       );
     } catch (e) {
-      console.warn("Failed to compute token/cost estimate:", e);
+      console.warn("[Stage 2A] Failed to compute token/cost estimate:", e);
+    }
+
+    if (!cleanedText || cleanedText.trim().length === 0) {
+      console.error("[Stage 2A] No cleaned text returned from model.");
+      return NextResponse.json(
+        { error: "Stage 2A returned empty response" },
+        { status: 500, headers: CORS_HEADERS },
+      );
+    }
+
+    // ============================================================
+    // STAGE 2B: Segmentation + headings ONLY (must copy verbatim)
+    // ============================================================
+    console.info("[Stage 2B] Starting segmentation-only pass...");
+    const stage2B_userContent = `TRANSCRIPT:\n"""\n${cleanedText}\n"""`;
+    console.log("[Stage 2B] Input length:", stage2B_userContent.length);
+    console.log(
+      "[Stage 2B] Input preview:",
+      stage2B_userContent.substring(0, 200) + "...",
+    );
+    const stage2B_completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: Stage2B_SegmentOnlyPrompt },
+        { role: "user", content: stage2B_userContent },
+      ],
+      max_tokens: 15000,
+    });
+
+    const segmentedText =
+      stage2B_completion.choices?.[0]?.message?.content ?? "";
+    console.log("[Stage 2B] Segmented text length:", segmentedText.length);
+    console.log(
+      "[Stage 2B] Segmented text preview:",
+      segmentedText.substring(0, 200) + "...",
+    );
+
+    // Log token/cost estimate for Stage 2B
+    try {
+      const promptTokens = approxTokenCount(Stage2B_SegmentOnlyPrompt);
+      const inputTokens = approxTokenCount(stage2B_userContent);
+      const outputTokens = approxTokenCount(segmentedText);
+      const totalTokens = promptTokens + inputTokens + outputTokens;
+      const approxUsd = estimateCostUsd("gpt-4o", totalTokens);
+      console.info(
+        `[Stage 2B token-estimate] model=gpt-4o tokens=${totalTokens} (prompt=${promptTokens} input=${inputTokens} output=${outputTokens}) approx_cost_usd=${approxUsd.toFixed(6)}`,
+      );
+    } catch (e) {
+      console.warn("[Stage 2B] Failed to compute token/cost estimate:", e);
+    }
+
+    // Robust JSON parsing
+    const finalResult = segmentedText;
+    try {
+      // Try parsing as JSON to validate format
+      const parsed = JSON.parse(segmentedText);
+      if (!Array.isArray(parsed)) {
+        throw new Error("Stage 2B did not return a JSON array");
+      }
+      // Validation: ensure each item has heading and text
+      for (const item of parsed) {
+        if (!item.heading || !item.text) {
+          throw new Error("Stage 2B JSON items missing required fields");
+        }
+      }
+      console.info(`[Stage 2B] Successfully parsed ${parsed.length} sections`);
+    } catch (parseErr) {
+      console.error("[Stage 2B] Failed to parse JSON response:", parseErr);
+      console.error("[Stage 2B] Raw response:", segmentedText);
+      // Return raw content for debugging (same pattern as existing code)
+      return NextResponse.json(
+        {
+          error: "Stage 2B returned invalid JSON",
+          details: String(parseErr),
+          raw: segmentedText,
+        },
+        { status: 500, headers: CORS_HEADERS },
+      );
     }
 
     return NextResponse.json(
-      { result: completion.choices[0].message.content },
+      { result: finalResult },
       { status: 200, headers: CORS_HEADERS },
     );
   } catch (err) {

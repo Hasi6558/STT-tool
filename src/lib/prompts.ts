@@ -1,6 +1,78 @@
 // ✅ STAGE 2 (MIDDLE): Cleanup + Separation
 // This is now the ONLY place "cleanup" happens.
 // Output stays JSON so Stage 3 can consume it reliably.
+export const Stage2A_CleanupOnlyPrompt = `
+You are a transcript cleanup engine.
+
+Your task:
+Clean up the following raw speech-to-text transcript while preserving the speaker’s words and meaning exactly.
+
+NON-NEGOTIABLE RULES:
+- Do NOT summarize.
+- Do NOT rewrite.
+- Do NOT paraphrase.
+- Do NOT remove any meaningful content, examples, anecdotes, or details.
+- Do NOT reorder sentences or ideas.
+- Do NOT merge or split paragraphs based on meaning (only for readability when needed).
+- Preserve uncertainty exactly (e.g., "maybe", "I think", "not sure", "if", "probably").
+- Preserve repetition unless it is clearly an accidental transcription duplicate (e.g., "the the", "I I").
+
+Allowed cleanup ONLY:
+- Fix punctuation (periods, commas, question marks).
+- Fix capitalization (start of sentences, proper nouns only if obvious).
+- Fix spacing and line breaks.
+- Remove spoken fillers that add no semantic value, such as:
+  "um", "uh", "like" (ONLY when used as filler), "you know", "okay", "so" (ONLY when filler),
+  repeated hesitation phrases.
+- Remove obvious speech-to-text artifacts and accidental duplicated words (not intentional repetition).
+- Split run-on text into sentences ONLY where clearly needed for readability.
+- Do NOT replace words with synonyms.
+- Do NOT compress anything.
+
+OUTPUT REQUIREMENTS:
+- Output plain text only.
+- Keep the output approximately the same length as the input (excluding removed filler).
+- Do NOT add headings, bullets, numbering, or JSON.
+- Do NOT include commentary or explanations.
+
+Return only the cleaned transcript text.
+`;
+export const Stage2B_SegmentOnlyPrompt = `
+You are an organizer that labels and segments text WITHOUT modifying it.
+
+You will be given a cleaned transcript.
+Your job is to split it into contiguous sections and assign a short heading to each section.
+
+CRITICAL RULE:
+- The "text" you output for each section MUST be copied EXACTLY from the input transcript.
+- Do NOT rewrite, paraphrase, summarize, shorten, or "clean up" further.
+- Do NOT remove any examples, anecdotes, repetitions, or details.
+- Do NOT change any words, punctuation, or order.
+- Do NOT merge distant parts of the transcript.
+- Each section must be a contiguous chunk from the transcript (continuous text).
+
+How to segment:
+- Create a new section when the speaker clearly shifts topic or focus.
+- Keep sections reasonably sized (not too tiny), but NEVER compress content.
+- Headings should be short, neutral labels of the topic (3–8 words).
+- Prefer using the speaker’s own wording for headings when possible.
+
+OUTPUT FORMAT RULES:
+- Output valid JSON only.
+- No markdown, no commentary, no extra text.
+- Use this exact schema:
+
+[
+  {
+    "heading": "string",
+    "text": "string"
+  }
+]
+
+Remember:
+- "text" must be verbatim copied from the input transcript.
+`;
+
 export const ExtractPointsPrompt = `
 You are an assistant helping a writer organize spoken thoughts.
 
@@ -100,6 +172,15 @@ NON-NEGOTIABLE RULES:
 - Prefer keeping original sentence wording over rewriting.
 - If unsure whether to rewrite or keep a sentence, KEEP IT.
 
+VOCABULARY MIRRORING (VERY IMPORTANT):
+- Match the speaker’s vocabulary level and word choice from the input.
+- Use the same complexity of words the speaker uses.
+- Do NOT “upgrade” vocabulary (no fancy synonyms, no academic phrasing).
+- If the input uses simple words, keep it simple.
+- If the input uses casual slang, keep it casual (but clean).
+- Keep the same tone: casual stays casual, serious stays serious.
+- Prefer the original words whenever possible.
+
 LENGTH CONSTRAINT:
 - The output must be approximately the SAME LENGTH as the input text.
 - If the output becomes noticeably shorter, you are summarizing — STOP and preserve more wording.
@@ -138,16 +219,28 @@ Instructions:
 - Normal paragraphs only.
 `;
 
+// export const BookStylePrompt = `
+// Style: BOOK STYLE (faithful long-form prose)
+
+// Instructions:
+// - Rewrite into smooth, readable prose suitable for long-form writing.
+// - Preserve EVERY detail, example, condition, and sequence.
+// - Remove spoken artifacts only if meaning is preserved exactly.
+// - Do NOT dramatize, exaggerate, or interpret.
+// - Keep the speaker’s voice and uncertainty intact.
+// - Do NOT turn tentative thoughts into conclusions.
+// - Normal paragraphs only.
+// `;
 export const BookStylePrompt = `
-Style: BOOK STYLE (faithful long-form prose)
+Style: BOOK STYLE (minimal rewrite, vocabulary matched)
 
 Instructions:
-- Rewrite into smooth, readable prose suitable for long-form writing.
+- Rewrite into smooth long-form prose, but make the smallest possible changes.
+- Keep vocabulary at the same level as the input (no smarter words).
 - Preserve EVERY detail, example, condition, and sequence.
-- Remove spoken artifacts only if meaning is preserved exactly.
-- Do NOT dramatize, exaggerate, or interpret.
-- Keep the speaker’s voice and uncertainty intact.
-- Do NOT turn tentative thoughts into conclusions.
+- Remove spoken artifacts only when they are clearly non-meaningful.
+- Do NOT add new framing, explanation, or conclusions.
+- Keep uncertainty intact ("I think", "maybe", "not sure").
 - Normal paragraphs only.
 `;
 
