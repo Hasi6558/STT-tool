@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // ============================================================
     console.info("[Stage 2A] Starting cleanup-only pass...");
     const stage2A_completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: Stage2A_CleanupOnlyPrompt },
         { role: "user", content: text },
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       stage2B_userContent.substring(0, 200) + "...",
     );
     const stage2B_completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: Stage2B_SegmentOnlyPrompt },
         { role: "user", content: stage2B_userContent },

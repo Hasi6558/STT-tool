@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import {
-  ExtractPointsPrompt,
   FinalBasePrompt,
   EnhanceStylePrompt,
   BookStylePrompt,
@@ -17,12 +16,11 @@ export function OPTIONS() {
   return NextResponse.json(null, { status: 204, headers: CORS_HEADERS });
 }
 
-// Types for the two-stage pipeline
+// Types for Stage 3 transformation
 interface TransformRequestBody {
-  text?: string;
   type?: "enhance" | "book";
   coreArgument?: string;
-  extractedPointsJson?: string; // Optional: JSON string from Stage 2 to skip re-extraction
+  extractedPointsJson?: string; // Required - output from Stage 2 (extract-points)
 }
 
 interface ExtractedPoint {
@@ -33,7 +31,7 @@ interface ExtractedPoint {
 export async function POST(req: NextRequest) {
   try {
     const body: TransformRequestBody = await req.json();
-    const { text, type, coreArgument, extractedPointsJson } = body ?? {};
+    const { type, coreArgument, extractedPointsJson } = body ?? {};
 
     if (!type) {
       return NextResponse.json(
@@ -50,89 +48,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log("API key : ", apiKey);
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OPENAI_API_KEY not set" },
+        { error: "ANTHROPIC_API_KEY not set" },
         { status: 500, headers: CORS_HEADERS },
       );
     }
 
-    const client = new OpenAI({ apiKey });
-
-    // ========================================
-    // STAGE 2: Extract points from raw transcript (if not already provided)
-    // ========================================
-    let extractedPoints: ExtractedPoint[];
-
-    if (extractedPointsJson) {
-      // Stage 2 already completed - use the provided JSON
-      console.info("[transform] Using pre-extracted points from Stage 2");
-      try {
-        extractedPoints = JSON.parse(extractedPointsJson) as ExtractedPoint[];
-        if (!Array.isArray(extractedPoints)) {
-          throw new Error("Provided extractedPointsJson is not an array");
-        }
-        console.info(
-          `[transform] Loaded ${extractedPoints.length} pre-extracted points`,
-        );
-      } catch (parseError) {
-        console.error(
-          "[transform] Failed to parse provided extractedPointsJson:",
-          parseError,
-        );
-        return NextResponse.json(
-          { error: "Invalid extractedPointsJson format" },
-          { status: 400, headers: CORS_HEADERS },
-        );
-      }
-    } else {
-      // No pre-extracted points - run Stage 2 now
-      if (!text) {
-        return NextResponse.json(
-          {
-            error:
-              "Missing text (raw transcript required when extractedPointsJson not provided)",
-          },
-          { status: 400, headers: CORS_HEADERS },
-        );
-      }
-
-      console.info("[transform] Starting Stage 2: ExtractPointsPrompt");
-
-      const stage2Completion = await client.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: ExtractPointsPrompt },
-          { role: "user", content: text },
-        ],
-        max_tokens: 8000,
-      });
-
-      const stage2Output = stage2Completion.choices[0]?.message?.content ?? "";
-
-      // Parse the JSON output from Stage 2
-      try {
-        extractedPoints = JSON.parse(stage2Output) as ExtractedPoint[];
-        if (!Array.isArray(extractedPoints)) {
-          throw new Error("Stage 2 output is not an array");
-        }
-      } catch (parseError) {
-        console.error(
-          "[transform] Failed to parse Stage 2 JSON output:",
-          parseError,
-        );
-        console.error("[transform] Raw Stage 2 output:", stage2Output);
-        return NextResponse.json(
-          { error: "Failed to parse extracted points from Stage 2" },
-          { status: 500, headers: CORS_HEADERS },
-        );
-      }
-
-      console.info(
-        `[transform] Stage 2 complete: extracted ${extractedPoints.length} points`,
+    // extractedPointsJson is REQUIRED - Stage 2 must be completed first
+    if (!extractedPointsJson) {
+      return NextResponse.json(
+        {
+          error:
+            "extractedPointsJson is required. Stage 2 must be completed before Stage 3.",
+        },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
+
+    // Parse the pre-extracted points from Stage 2
+    let extractedPoints: ExtractedPoint[];
+    try {
+      extractedPoints = JSON.parse(extractedPointsJson) as ExtractedPoint[];
+      if (!Array.isArray(extractedPoints)) {
+        throw new Error("Provided extractedPointsJson is not an array");
+      }
+      console.info(
+        `[transform] Loaded ${extractedPoints.length} pre-extracted points from Stage 2`,
+      );
+    } catch (parseError) {
+      console.error(
+        "[transform] Failed to parse provided extractedPointsJson:",
+        parseError,
+      );
+      return NextResponse.json(
+        { error: "Invalid extractedPointsJson format" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const client = new Anthropic({ apiKey });
 
     // ========================================
     // STAGE 3: Apply final style transformation
@@ -156,16 +113,23 @@ export async function POST(req: NextRequest) {
     // Format the extracted points as input for Stage 3
     const stage3UserInput = JSON.stringify(extractedPoints, null, 2);
 
-    const stage3Completion = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: stage3SystemPrompt },
-        { role: "user", content: stage3UserInput },
-      ],
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 15000,
+      system: stage3SystemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: stage3UserInput,
+        },
+      ],
     });
 
-    const finalResult = stage3Completion.choices[0]?.message?.content ?? "";
+    const finalResult =
+      message.content
+        .filter((b) => b.type === "text")
+        .map((b: any) => b.text)
+        .join("") ?? "";
 
     console.info("[transform] Stage 3 complete: final transformation done");
 
