@@ -219,18 +219,6 @@ Instructions:
 - Normal paragraphs only.
 `;
 
-// export const BookStylePrompt = `
-// Style: BOOK STYLE (faithful long-form prose)
-
-// Instructions:
-// - Rewrite into smooth, readable prose suitable for long-form writing.
-// - Preserve EVERY detail, example, condition, and sequence.
-// - Remove spoken artifacts only if meaning is preserved exactly.
-// - Do NOT dramatize, exaggerate, or interpret.
-// - Keep the speaker’s voice and uncertainty intact.
-// - Do NOT turn tentative thoughts into conclusions.
-// - Normal paragraphs only.
-// `;
 export const BookStylePrompt = `
 Style: BOOK STYLE (minimal rewrite, vocabulary matched)
 
@@ -243,16 +231,14 @@ Instructions:
 - Keep uncertainty intact ("I think", "maybe", "not sure").
 - Normal paragraphs only.
 `;
+// export const BookStylePrompt = `
+// Style: BOOK STYLE (faithful rewrite)
 
-// ❌ DEPRECATED / REMOVE (final-stage option)
-// Client requirement: cleanup is done in the middle section now.
-// Keep only if you need it internally for debugging, but do not expose it in UI.
-export const CleanUpPrompt_DEPRECATED = `
-[DEPRECATED] Cleanup is handled in Stage 2 (ExtractPointsPrompt). Do not use as a final style option.
-`;
-
-/**
- * Example usage (Stage 3):
- * const finalPrompt = FinalBasePrompt + EnhanceStylePrompt;
- * // Provide input sections + CORE_ARGUMENT via your template system.
- */
+// Instructions:
+// - Rewrite into smooth long-form prose suitable for reading.
+// - Rephrase sentences where needed for flow, while preserving every idea and detail.
+// - You MAY remove repeated filler words (like "like", "you know") if it improves readability.
+// - Keep the same meaning, order, and first-person voice.
+// - Keep uncertainty intact ("I think", "maybe", "not sure").
+// - Normal paragraphs only.
+// `;
