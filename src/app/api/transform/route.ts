@@ -116,7 +116,9 @@ export async function POST(req: NextRequest) {
         // Strip markdown code blocks if present
         let jsonText = stage2Output.trim();
         if (jsonText.startsWith("```")) {
-          jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+          jsonText = jsonText
+            .replace(/^```(?:json)?\s*\n?/, "")
+            .replace(/\n?```\s*$/, "");
         }
         extractedPoints = JSON.parse(jsonText) as ExtractedPoint[];
         if (!Array.isArray(extractedPoints)) {

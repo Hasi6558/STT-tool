@@ -144,7 +144,9 @@ export async function POST(req: NextRequest) {
     let jsonText = segmentedText.trim();
     if (jsonText.startsWith("```")) {
       // Remove markdown code blocks (e.g., ```json ... ```)
-      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+      jsonText = jsonText
+        .replace(/^```(?:json)?\s*\n?/, "")
+        .replace(/\n?```\s*$/, "");
     }
     const finalResult = jsonText;
     try {
