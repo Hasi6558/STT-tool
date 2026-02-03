@@ -113,7 +113,12 @@ export async function POST(req: NextRequest) {
 
       // Parse the JSON output from Stage 2
       try {
-        extractedPoints = JSON.parse(stage2Output) as ExtractedPoint[];
+        // Strip markdown code blocks if present
+        let jsonText = stage2Output.trim();
+        if (jsonText.startsWith("```")) {
+          jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+        }
+        extractedPoints = JSON.parse(jsonText) as ExtractedPoint[];
         if (!Array.isArray(extractedPoints)) {
           throw new Error("Stage 2 output is not an array");
         }

@@ -140,11 +140,16 @@ export async function POST(req: NextRequest) {
       console.warn("[Stage 2B] Failed to compute token/cost estimate:", e);
     }
 
-    // Robust JSON parsing
-    const finalResult = segmentedText;
+    // Robust JSON parsing - strip markdown code blocks if present
+    let jsonText = segmentedText.trim();
+    if (jsonText.startsWith("```")) {
+      // Remove markdown code blocks (e.g., ```json ... ```)
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+    }
+    const finalResult = jsonText;
     try {
       // Try parsing as JSON to validate format
-      const parsed = JSON.parse(segmentedText);
+      const parsed = JSON.parse(jsonText);
       if (!Array.isArray(parsed)) {
         throw new Error("Stage 2B did not return a JSON array");
       }
