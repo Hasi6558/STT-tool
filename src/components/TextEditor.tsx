@@ -21,7 +21,7 @@ import {
 import { Arrow } from "@radix-ui/react-tooltip";
 import ArrowButton from "./ArrowButton";
 
-type TranscriptionMode = "sentence" | "realtime";
+type TranscriptionMode = "nova" | "nova-3";
 
 interface TextEditorProps {
   isMicSectionOpen: boolean;
@@ -42,7 +42,7 @@ export default function TextEditor({
   const [status, setStatus] = useState<string>("Ready");
   const [isMicConnected, setIsMicConnected] = useState<boolean>(false);
   const [transcriptionMode, setTranscriptionMode] =
-    useState<TranscriptionMode>("sentence");
+    useState<TranscriptionMode>("nova");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [interimTranscript, setInterimTranscript] = useState<string>("");
 
@@ -62,17 +62,7 @@ export default function TextEditor({
   );
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const transcriptItemsRef = useRef<
-    Map<
-      string,
-      {
-        text: string;
-        previousItemId: string | null;
-      }
-    >
-  >(new Map());
-  const currentItemIdRef = useRef<string | null>(null);
-  const transcriptionModeRef = useRef<TranscriptionMode>("sentence");
+  const transcriptionModeRef = useRef<TranscriptionMode>("nova");
   const finalizedTextRef = useRef<string>(""); // Track finalized text for realtime mode
 
   // Refs for tracking insertion point
@@ -88,7 +78,7 @@ export default function TextEditor({
 
   // Sync accumulated transcript when finalized text changes in realtime mode
   useEffect(() => {
-    if (transcriptionMode === "realtime" && isMicOn && finalizedSessionText) {
+    if (isMicOn && finalizedSessionText) {
       const completeText =
         baseTextBefore + finalizedSessionText + baseTextAfter;
       textRef.current = completeText;
@@ -109,7 +99,6 @@ export default function TextEditor({
     finalizedSessionText,
     baseTextBefore,
     baseTextAfter,
-    transcriptionMode,
     isMicOn,
     setAccumulatedTranscript,
   ]);
@@ -207,43 +196,9 @@ export default function TextEditor({
     }
   }, []);
 
-  // Helper function to rebuild transcript in correct order
-  const rebuildTranscript = () => {
-    const items = transcriptItemsRef.current;
-    if (items.size === 0) return "";
-
-    // Build a map of item_id -> next_item_id
-    const nextMap = new Map<string, string>();
-    let firstItemId: string | null = null;
-
-    items.forEach((item, itemId) => {
-      if (item.previousItemId) {
-        nextMap.set(item.previousItemId, itemId);
-      } else {
-        firstItemId = itemId;
-      }
-    });
-
-    // Traverse in order
-    const orderedTexts: string[] = [];
-    let currentId: string | null = firstItemId;
-    const visited = new Set<string>();
-
-    while (currentId && !visited.has(currentId)) {
-      visited.add(currentId);
-      const item = items.get(currentId);
-      if (item && item.text) {
-        orderedTexts.push(item.text);
-      }
-      currentId = nextMap.get(currentId) || null;
-    }
-
-    return orderedTexts.join(" ");
-  };
-
   // Function to update insertion point when cursor moves during realtime recording
   const updateRealtimeInsertionPoint = (newCursorPos: number) => {
-    if (transcriptionModeRef.current !== "realtime" || !isMicOn) return;
+    if (!isMicOn) return;
 
     // Build the current complete text from the current state
     const currentCompleteText =
@@ -314,9 +269,7 @@ export default function TextEditor({
         cursorRef.current = textareaRef.current.selectionStart;
       }
 
-      // Clear current session transcript items but keep accumulated transcript
-      transcriptItemsRef.current.clear();
-      currentItemIdRef.current = null;
+      // Clear current session transcript
       setTranscript("");
 
       // Request microphone access (guard for environments without mediaDevices)
@@ -369,16 +322,14 @@ export default function TextEditor({
         );
 
         // Reset finalized text tracker for realtime mode
-        if (transcriptionModeRef.current === "realtime") {
-          finalizedTextRef.current = "";
-          // Store the base text split at cursor for inline interim display
-          const currentText = textRef.current ?? "";
-          const insertPos = cursorRef.current ?? currentText.length;
-          insertionPointRef.current = insertPos;
-          setBaseTextBefore(currentText.slice(0, insertPos));
-          setBaseTextAfter(currentText.slice(insertPos));
-          setFinalizedSessionText("");
-        }
+        finalizedTextRef.current = "";
+        // Store the base text split at cursor for inline interim display
+        const currentText = textRef.current ?? "";
+        const insertPos = cursorRef.current ?? currentText.length;
+        insertionPointRef.current = insertPos;
+        setBaseTextBefore(currentText.slice(0, insertPos));
+        setBaseTextAfter(currentText.slice(insertPos));
+        setFinalizedSessionText("");
       };
 
       ws.onmessage = (event) => {
@@ -388,93 +339,6 @@ export default function TextEditor({
         switch (data.type) {
           case "ready":
             setStatus("Recording...");
-            break;
-
-          case "input_audio_buffer.committed":
-            // Speech chunk detected and committed
-            // Track the item_id and previous_item_id for ordering
-            if (data.item_id) {
-              currentItemIdRef.current = data.item_id;
-              transcriptItemsRef.current.set(data.item_id, {
-                text: "",
-                previousItemId: data.previous_item_id || null,
-              });
-              console.log(
-                `Committed item: ${data.item_id}, previous: ${data.previous_item_id}`,
-              );
-            }
-            setStatus("Processing speech...");
-            break;
-
-          case "conversation.item.input_audio_transcription.delta":
-            // Real-time transcription updates for current item
-            if (data.delta && data.item_id) {
-              const currentItem = transcriptItemsRef.current.get(data.item_id);
-              if (currentItem) {
-                currentItem.text += data.delta;
-              } else {
-                // Item not tracked yet, create it
-                transcriptItemsRef.current.set(data.item_id, {
-                  text: data.delta,
-                  previousItemId: null,
-                });
-              }
-            }
-            break;
-
-          case "conversation.item.input_audio_transcription.completed":
-            if (data.transcript) {
-              insertTextAtCursor(data.transcript);
-            }
-            setStatus("Recording...");
-            break;
-
-          case "input_audio_buffer.speech_started":
-            setStatus("Speech detected...");
-            break;
-
-          case "input_audio_buffer.speech_stopped":
-            setStatus("Processing...");
-            break;
-
-          case "conversation.item.created":
-            // Handle item created event which may contain transcript
-            console.log("Item created:", data);
-            if (data.item?.id) {
-              const itemId = data.item.id;
-              // Check if this item has a transcript in content
-              if (data.item.content && Array.isArray(data.item.content)) {
-                for (const content of data.item.content) {
-                  console.log("Content item:", content);
-                  if (content.type === "input_audio" && content.transcript) {
-                    console.log(
-                      "Found transcript in item.created:",
-                      content.transcript,
-                    );
-                    const item = transcriptItemsRef.current.get(itemId);
-                    if (item) {
-                      item.text = content.transcript;
-                      setTranscript(rebuildTranscript());
-                      setStatus("Recording...");
-                    } else {
-                      // Item not tracked yet, add it with data from event
-                      transcriptItemsRef.current.set(itemId, {
-                        text: content.transcript,
-                        previousItemId: data.previous_item_id || null,
-                      });
-                      setTranscript(rebuildTranscript());
-                      setStatus("Recording...");
-                    }
-                  }
-                }
-              }
-            }
-            break;
-
-          case "transcription_session.created":
-          case "transcription_session.updated":
-            // Session events - no action needed, just acknowledged
-            console.log("Session event:", data.type);
             break;
 
           case "error":
@@ -760,14 +624,14 @@ export default function TextEditor({
                     : "bg-white/30 hover:bg-white/40 text-white cursor-pointer"
                   }`}
                 >
-                  {transcriptionMode === "sentence" ?
+                  {transcriptionMode === "nova" ?
                     <>
-                      <Text className="h-4 w-4" />
-                      Sentence Mode
+                      <Zap className="h-4 w-4" />
+                      Nova
                     </>
                   : <>
                       <Zap className="h-4 w-4" />
-                      RealTime Mode
+                      Nova 3
                     </>
                   }
                   <ChevronDown
@@ -780,39 +644,39 @@ export default function TextEditor({
                   <div className="absolute right-0 mt-1 w-48 bg-white rounded border border-gray-300 overflow-hidden z-50">
                     <button
                       onClick={() => {
-                        setTranscriptionMode("sentence");
+                        setTranscriptionMode("nova");
                         setIsDropdownOpen(false);
                       }}
                       className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "sentence" ?
-                          "bg-green-50 text-green-700"
-                        : "text-gray-700"
-                      }`}
-                    >
-                      <Text className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">Sentence Mode</div>
-                        <div className="text-xs text-gray-500">
-                          OpenAI GPT-4o
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTranscriptionMode("realtime");
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
-                        transcriptionMode === "realtime" ?
+                        transcriptionMode === "nova" ?
                           "bg-green-50 text-green-700"
                         : "text-gray-700"
                       }`}
                     >
                       <Zap className="h-4 w-4" />
                       <div>
-                        <div className="font-medium">RealTime Mode</div>
+                        <div className="font-medium">Nova</div>
                         <div className="text-xs text-gray-500">
-                          Deepgram Nova 3
+                          Deepgram Baseline
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTranscriptionMode("nova-3");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors ${
+                        transcriptionMode === "nova-3" ?
+                          "bg-green-50 text-green-700"
+                        : "text-gray-700"
+                      }`}
+                    >
+                      <Zap className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Nova 3</div>
+                        <div className="text-xs text-gray-500">
+                          Deepgram Enhanced
                         </div>
                       </div>
                     </button>
@@ -825,9 +689,9 @@ export default function TextEditor({
         <CardContent className="relative px-8 pt-0 pb-0 flex flex-col items-center justify-start transition-all duration-300">
           <Textarea
             placeholder={
-              transcriptionMode === "sentence" ?
-                "No transcript yet. Click the microphone to start recording.\n(Sentence Transcription - Higher Quality)"
-              : "No transcript yet. Click the microphone to start recording.\n(Realtime - Faster)"
+              transcriptionMode === "nova" ?
+                "No transcript yet. Click the microphone to start recording.\n(Deepgram Nova - Baseline Model)"
+              : "No transcript yet. Click the microphone to start recording.\n(Deepgram Nova 3 - Enhanced Model)"
             }
             ref={textareaRef}
             className={
@@ -842,7 +706,7 @@ export default function TextEditor({
             disabled={false}
             value={
               // For realtime mode during recording, show interim text inline at cursor position
-              transcriptionMode === "realtime" && isMicOn && interimTranscript ?
+              isMicOn && interimTranscript ?
                 baseTextBefore +
                 finalizedSessionText +
                 (finalizedSessionText ? " " : "") +
@@ -854,8 +718,8 @@ export default function TextEditor({
               const newPos = e.target.selectionStart;
               cursorRef.current = newPos;
 
-              // If in realtime recording mode, we need to handle the change specially
-              if (transcriptionMode === "realtime" && isMicOn) {
+              // If in recording mode, we need to handle the change specially
+              if (isMicOn) {
                 // Update the accumulated transcript and re-establish insertion point
                 const newValue = e.target.value;
                 textRef.current = newValue;
@@ -876,8 +740,8 @@ export default function TextEditor({
                 const newPos = textareaRef.current.selectionStart;
                 cursorRef.current = newPos;
 
-                // Update insertion point if in realtime recording mode
-                if (transcriptionMode === "realtime" && isMicOn) {
+                // Update insertion point if in recording mode
+                if (isMicOn) {
                   // Use setTimeout to ensure we get the position after the click is processed
                   setTimeout(() => {
                     if (textareaRef.current) {
@@ -906,11 +770,7 @@ export default function TextEditor({
                   "PageUp",
                   "PageDown",
                 ];
-                if (
-                  transcriptionMode === "realtime" &&
-                  isMicOn &&
-                  navigationKeys.includes(e.key)
-                ) {
+                if (isMicOn && navigationKeys.includes(e.key)) {
                   updateRealtimeInsertionPoint(newPos);
                 }
               }

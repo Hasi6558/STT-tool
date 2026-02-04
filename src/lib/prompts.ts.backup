@@ -5,7 +5,7 @@ export const Stage2A_CleanupOnlyPrompt = `
 You are a transcript cleanup engine.
 
 Your task:
-Clean up the following raw speech-to-text transcript while preserving the speaker's words and meaning exactly.
+Clean up the following raw speech-to-text transcript while preserving the speaker’s words and meaning exactly.
 
 NON-NEGOTIABLE RULES:
 - Do NOT summarize.
@@ -37,7 +37,6 @@ OUTPUT REQUIREMENTS:
 
 Return only the cleaned transcript text.
 `;
-
 export const Stage2B_SegmentOnlyPrompt = `
 You are an organizer that labels and segments text WITHOUT modifying it.
 
@@ -56,7 +55,7 @@ How to segment:
 - Create a new section when the speaker clearly shifts topic or focus.
 - Keep sections reasonably sized (not too tiny), but NEVER compress content.
 - Headings should be short, neutral labels of the topic (3–8 words).
-- Prefer using the speaker's own wording for headings when possible.
+- Prefer using the speaker’s own wording for headings when possible.
 
 OUTPUT FORMAT RULES:
 - Output valid JSON only.
@@ -117,7 +116,7 @@ What to do:
 3. Each section should contain ALL original sentences that belong to that part of the speech.
 4. For each section:
    - Create a short, neutral heading that LABELS the topic being discussed
-     (prefer the speaker's own wording where possible).
+     (prefer the speaker’s own wording where possible).
    - Place the cleaned original text under the heading, fully preserved.
 
 Output format rules:
@@ -135,52 +134,63 @@ Output format rules:
 `;
 
 // ✅ STAGE 3 (FINAL): Base prompt shared by all final styles
+// Summarize-like framing: "clarified version" (NOT a summary that removes details)
 export const FinalBasePrompt = `
-You are a professional writing editor transforming spoken transcript into polished written prose.
+You are a constrained rewrite engine for spoken language.
 
-You will be given cleaned and structured text from a speaker's transcript.
-The input format: [SECTION: heading] followed by the content.
-Use section markers ONLY for context - do NOT include them in your output.
+You will be given CLEANED and STRUCTURED text that comes directly from a speaker’s transcript.
+The input consists of multiple sections. Each section contains:
+- a "heading" (context only)
+- a "text" field (the content to process)
 
-Core argument (optional context):
+Use headings ONLY to understand context and flow.
+Do NOT repeat, reference, or output headings.
+
+Core argument provided by the user (context only, do NOT reshape content to fit it):
 """
 {{CORE_ARGUMENT}}
 """
 
 YOUR TASK:
-Transform the spoken transcript into smooth, natural written prose that flows well when read.
+Rewrite the input so it reads smoothly as written text,
+while staying extremely close to the original wording, length, and structure.
 
-KEY PRINCIPLES:
-- Preserve ALL ideas, details, examples, and anecdotes - do not remove content.
-- Maintain the speaker's intended meaning and emphasis.
-- Keep the same tone and voice (formal/casual, serious/playful).
+THIS IS NOT A SUMMARY.
+THIS IS NOT AN EXPLANATION.
+THIS IS NOT AN INTERPRETATION.
+
+NON-NEGOTIABLE RULES:
+- Preserve ALL ideas, details, examples, repetitions, and uncertainties.
+- Do NOT remove content for brevity or clarity.
+- Do NOT generalize, abstract, or explain ideas.
+- Do NOT collapse multiple ideas into one.
+- Do NOT change meaning, intent, or emphasis.
+- Preserve uncertainty words exactly (e.g. "maybe", "I think", "not sure", "if").
+- Preserve repetition unless it is a clear transcription error.
 - Preserve first-person voice ("I", "me") where present.
-- Keep uncertainty intact ("maybe", "I think", "not sure").
-- Maintain the original order and flow of ideas.
+- Preserve the original order of ideas.
+- Prefer keeping original sentence wording over rewriting.
+- If unsure whether to rewrite or keep a sentence, KEEP IT.
 
-ALLOWED TRANSFORMATIONS:
-- Restructure sentences for better readability.
-- Combine short choppy sentences or split overly long ones.
-- Add smooth transitions between ideas.
-- Replace repetitive phrasing with varied expressions (while keeping meaning).
-- Remove remaining filler words and verbal tics.
-- Improve grammar and flow.
+VOCABULARY MIRRORING (VERY IMPORTANT):
+- Match the speaker’s vocabulary level and word choice from the input.
+- Use the same complexity of words the speaker uses.
+- Do NOT “upgrade” vocabulary (no fancy synonyms, no academic phrasing).
+- If the input uses simple words, keep it simple.
+- If the input uses casual slang, keep it casual (but clean).
+- Keep the same tone: casual stays casual, serious stays serious.
+- Prefer the original words whenever possible.
 
-VOCABULARY:
-- Match the speaker's general vocabulary level.
-- You may refine word choice for clarity, but avoid overly formal or academic language.
-- Keep the natural conversational tone where appropriate.
+LENGTH CONSTRAINT:
+- The output must be approximately the SAME LENGTH as the input text.
+- If the output becomes noticeably shorter, you are summarizing — STOP and preserve more wording.
 
-LENGTH:
-- Output should be similar in length to input (slight reduction from removing filler is OK).
-- Focus on clarity and readability, not compression.
-
-OUTPUT FORMAT:
-- Plain text only, formatted in natural paragraphs.
-- No headings, bullets, markdown, or meta commentary.
-- Combine all sections into one continuous flowing text.
+FORMAT RULES:
+- Output plain text only.
+- No headings, bullets, numbering, markdown, or symbols.
+- No preface, no explanation, no meta commentary.
+- Combine all processed text into one continuous plain-text output.
 `;
-
 // ✅ STAGE 3 STYLE MODIFIERS
 // You append one of these to FinalBasePrompt based on the selected style.
 
@@ -221,22 +231,14 @@ Instructions:
 - Create a professional, published-book quality output.
 - Preserve all substantive content, examples, and the speaker's unique insights.
 `;
+// export const BookStylePrompt = `
+// Style: BOOK STYLE (faithful rewrite)
 
-/*
-[DEPRECATED] Cleanup is handled in Stage 2 (ExtractPointsPrompt). Do not use as a final style option.
-*/
-export const DeprecatedCleanupPrompt = `
-You are a transcript cleanup engine.
-
-Your task: lightly clean the following raw speech-to-text (STT) transcript.
-
-Guidelines:
-- Remove spoken fillers (um, uh, like, you know, okay, so, etc.).
-- Remove obvious STT artifacts (accidental duplicated words, stutters).
-- Fix punctuation and capitalization.
-- Split run-on text into sentences where clearly needed.
-- Do NOT paraphrase or rewrite. Preserve the speaker's original wording and sentence order.
-- Do NOT add commentary or explanations.
-
-Return only the cleaned transcript text (no headings, bullets, or JSON).
-`;
+// Instructions:
+// - Rewrite into smooth long-form prose suitable for reading.
+// - Rephrase sentences where needed for flow, while preserving every idea and detail.
+// - You MAY remove repeated filler words (like "like", "you know") if it improves readability.
+// - Keep the same meaning, order, and first-person voice.
+// - Keep uncertainty intact ("I think", "maybe", "not sure").
+// - Normal paragraphs only.
+// `;

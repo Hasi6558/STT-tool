@@ -111,7 +111,10 @@ export async function POST(req: NextRequest) {
     const stage3SystemPrompt = basePromptWithArg + "\n\n" + stylePrompt;
 
     // Format the extracted points as input for Stage 3
-    const stage3UserInput = JSON.stringify(extractedPoints, null, 2);
+    // Convert JSON to structured text format that the prompt expects
+    const stage3UserInput = extractedPoints
+      .map((point) => `[SECTION: ${point.heading}]\n${point.text}`)
+      .join("\n\n");
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-5-20250929",
